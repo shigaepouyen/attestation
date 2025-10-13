@@ -1,4 +1,4 @@
-# 🧾 APEL Saint-Joseph Wattrelos — Système de gestion des attestations
+# 🧾 Système de gestion des attestations
 
 ## 🎯 Objectif
 
@@ -40,7 +40,7 @@ attestation/
 │   ├── index.php               → formulaire de dépôt
 │   ├── upload.php              → traitement des fichiers
 │   ├── download.php            → lien sécurisé (direction)
-│   └── admin.php               → tableau de bord APEL
+│   └── admin.php               → tableau de bord
 ```
 
 ---
@@ -50,7 +50,7 @@ attestation/
 - PHP 8.1 ou supérieur (mutualisé OVH compatible)  
 - Accès SSH ou FTP  
 - Compte **Google Workspace** configuré avec :
-  - une adresse expéditrice, ex. `attestations@apelstjosephwattrelos.fr`
+  - une adresse expéditrice, ex. `attestations@domaine.fr`
   - un **mot de passe d’application Gmail**
 - Dossiers inscriptibles :  
   `db/`, `storage/`, `storage/uploads/`, `storage/logs/`
@@ -81,7 +81,7 @@ Copie le hash affiché et colle-le dans `config.php`, section :
 
 ```php
 'admin' => [
-  'user' => 'apel',
+  'user' => 'admin',
   'pass_hash' => 'TON_HASH_ICI'
 ]
 ```
@@ -97,7 +97,7 @@ Copie le hash affiché et colle-le dans `config.php`, section :
 'director_email' => 'directrice@college.fr',
 
 'smtp' => [
-  'user' => 'attestations@apelstjosephwattrelos.fr',
+  'user' => 'attestations@domaine.fr',
   'pass' => 'MOT_DE_PASSE_APPLICATION'
 ]
 ```
