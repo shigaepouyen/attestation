@@ -1,5 +1,8 @@
 <?php
 // cron/weekly_digest.php
+// Envoie un e-mail hebdomadaire à la direction avec un lien sécurisé
+// vers une page web listant toutes les attestations valides.
+
 require __DIR__ . '/../config.php';
 $config = require __DIR__ . '/../config.php';
 $db = new PDO('sqlite:' . $config['db_file']);
@@ -7,22 +10,37 @@ $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 require_once __DIR__ . '/../lib/sendmail.php';
 
+// Étape 1: Vérifier s'il y a eu de nouveaux dépôts cette semaine.
 $since = strtotime('-7 days');
-$stmt = $db->prepare('SELECT * FROM attestations WHERE uploaded_at >= ? AND deleted_at IS NULL');
-$stmt->execute([$since]);
-$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$checkNewStmt = $db->prepare('SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ?');
+$checkNewStmt->execute([$since]);
+$newSubmissionsCount = (int)$checkNewStmt->fetchColumn();
 
-if (empty($rows)) { echo "No new this week\n"; exit; }
-
-$subject = "Livraison hebdomadaire – Attestations APEL Saint-Joseph – " . date('Y-m-d');
-$body = "Bonjour Madame la Directrice,\n\nVoici les nouvelles attestations déposées cette semaine :\n\n";
-
-foreach ($rows as $r) {
-  $link = rtrim($config['site_base_url'],'/').'/download.php?token='.$r['token'];
-  $body .= "- {$r['nom']} {$r['prenom']} — déposée le ".date('Y-m-d', $r['uploaded_at'])." — $link\n";
+if ($newSubmissionsCount === 0) {
+    echo "Aucun nouveau depot cette semaine. Aucun e-mail envoye.\n";
+    exit;
 }
 
+// Étape 2: Générer un "master token" unique pour l'accès à la page de rapport.
+// On le stocke dans un fichier temporaire pour que la page de rapport puisse le vérifier.
+$masterToken = bin2hex(random_bytes(32));
+$tokenFile = rtrim($config['storage_dir'], '/') . '/../storage/master_token.txt';
+// Le token est valable 2 semaines pour laisser le temps de consulter le rapport.
+$tokenData = json_encode(['token' => $masterToken, 'expiry' => time() + (14 * 24 * 60 * 60)]);
+file_put_contents($tokenFile, $tokenData);
+
+// Étape 3: Préparer et envoyer l'e-mail.
+$subject = "[APEL St Jo] Attestation honorabilité - " . date('Y-m-d');
+$reportLink = rtrim($config['site_base_url'], '/') . '/rapport.php?token=' . $masterToken;
+
+$body = "Bonjour Madame la Directrice,\n\n";
+$body .= "Il y a eu " . $newSubmissionsCount . " nouveau(x) dépôt(s) d'attestation cette semaine.\n\n";
+$body .= "Vous pouvez consulter la liste complète et à jour de toutes les attestations valides en cliquant sur le lien sécurisé ci-dessous :\n\n";
+$body .= "$reportLink\n\n";
+$body .= "Ce lien est valable 14 jours.\n";
 $body .= "\nCordialement,\nAPEL Saint-Joseph\n";
 
 $sent = sendMail($config['director_email'], $subject, $body, $config);
-echo "Digest sent to {$config['director_email']} (sent=" . ($sent?1:0) . "), count=" . count($rows) . "\n";
+
+echo "E-mail de rapport envoye a {$config['director_email']} (sent=" . ($sent ? 1 : 0) . ").\n";
+

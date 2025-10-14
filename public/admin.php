@@ -3,14 +3,18 @@
 session_start();
 $config = require __DIR__ . '/../config.php';
 $dbfile = $config['db_file'];
-if (!file_exists($dbfile)) { http_response_code(500); echo "DB absente"; exit; }
+if (!file_exists($dbfile)) { http_response_code(500); echo "Erreur: Fichier de base de données introuvable."; exit; }
 $db = new PDO('sqlite:' . $dbfile);
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-// logout
-if (isset($_GET['logout'])){ session_destroy(); header('Location: '.$_SERVER['PHP_SELF']); exit; }
+// Déconnexion
+if (isset($_GET['logout'])){ 
+    session_destroy(); 
+    header('Location: '.$_SERVER['PHP_SELF']); 
+    exit; 
+}
 
-// auth
+// Authentification
 if (!isset($_SESSION['admin_ok']) || $_SESSION['admin_ok'] !== true) {
   $err = null;
   if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,65 +22,101 @@ if (!isset($_SESSION['admin_ok']) || $_SESSION['admin_ok'] !== true) {
     $p = $_POST['p'] ?? '';
     if ($u === ($config['admin']['user'] ?? 'admin') && password_verify($p, $config['admin']['pass_hash'] ?? '')) {
       $_SESSION['admin_ok'] = true;
-      header('Location: '.$_SERVER['PHP_SELF']); exit;
+      header('Location: '.$_SERVER['PHP_SELF']); 
+      exit;
     }
     $err = "Identifiants invalides";
   }
   ?>
   <!doctype html>
-  <html lang="fr"><head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Admin – Attestations</title>
-    <style>body{font-family:system-ui;max-width:420px;margin:12vh auto;padding:0 16px} .card{border:1px solid #ddd;padding:16px;border-radius:8px} input,button{width:100%;padding:.6rem;border-radius:6px;border:1px solid #ccc} .err{background:#fff5f5;padding:8px;border-radius:6px;color:#7f1d1d;margin-bottom:12px}</style>
-  </head><body>
-    <h1>Admin – Attestations</h1>
-    <div class="card">
+  <html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Administration – Attestations</title>
+    <style>
+      :root {
+        --primary-color: #0d6efd;
+        --background-color: #f8f9fa;
+        --text-color: #212529;
+        --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        --border-color: #dee2e6;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: var(--background-color);
+        margin: 0;
+        color: var(--text-color);
+      }
+      .login-card {
+        width: 100%;
+        max-width: 400px;
+        padding: 2.5rem;
+        box-shadow: var(--card-shadow);
+        border-radius: 12px;
+        background: white;
+        border: 1px solid var(--border-color);
+      }
+      h1 { text-align: center; margin-bottom: 2rem; }
+      label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+      input { width: 100%; padding: .75rem; border-radius: 6px; border: 1px solid #ccc; box-sizing: border-box; margin-bottom: 1rem; }
+      button { width: 100%; padding: .75rem; border-radius: 6px; border: none; background: var(--primary-color); color: white; font-weight: bold; cursor: pointer; }
+      .err { background: #f8d7da; padding: 1rem; border-radius: 6px; color: #721c24; margin-bottom: 1rem; border: 1px solid #f5c6cb; }
+    </style>
+  </head>
+  <body>
+    <div class="login-card">
+      <h1>Administration</h1>
       <?php if (!empty($err)) echo '<div class="err">'.htmlspecialchars($err).'</div>'; ?>
       <form method="post">
-        <label>Utilisateur</label><input name="u" required>
-        <label>Mot de passe</label><input name="p" type="password" required>
+        <label for="u">Utilisateur</label>
+        <input id="u" name="u" required>
+        <label for="p">Mot de passe</label>
+        <input id="p" name="p" type="password" required>
         <button type="submit">Se connecter</button>
       </form>
     </div>
-  </body></html>
+  </body>
+  </html>
   <?php
   exit;
 }
 
-// helpers
+// Fonctions utilitaires
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
-function dt($ts){ return $ts ? date('Y-m-d', (int)$ts) : ''; }
+function dt($ts){ return $ts ? date('d/m/Y', (int)$ts) : '—'; }
 function etat($row, $now){
-  if (!empty($row['deleted_at'])) return 'Supprimée';
-  if ($row['expiry_at'] <= $now) return 'Expirée';
-  return 'Active';
+  if (!empty($row['deleted_at'])) return ['text' => 'Supprimée', 'class' => 'deleted'];
+  if ($row['expiry_at'] <= $now) return ['text' => 'Expirée', 'class' => 'expired'];
+  if (($row['expiry_at'] - $now) < (30 * 86400)) return ['text' => 'Expire bientôt', 'class' => 'soon'];
+  return ['text' => 'Active', 'class' => 'active'];
 }
 
-// filtres & pagination
+// Filtres & pagination
 $qs = $_GET;
 $search = trim($qs['q'] ?? '');
 $state = trim($qs['state'] ?? '');
-$soonDays = (int)($qs['soon'] ?? 14);
+$soonDays = (int)($qs['soon'] ?? 30);
 $page = max(1, (int)($qs['page'] ?? 1));
 $pageSize = (int)($config['admin']['page_size'] ?? 25);
-$offset = ($page-1)*$pageSize;
+$offset = ($page - 1) * $pageSize;
 $now = time();
 
-// stats
-$stats = [];
-$stats['total']   = (int)$db->query("SELECT COUNT(*) FROM attestations")->fetchColumn();
-$stats['actifs']  = (int)$db->query("SELECT COUNT(*) FROM attestations WHERE deleted_at IS NULL AND expiry_at > $now")->fetchColumn();
-$stats['exp']     = (int)$db->query("SELECT COUNT(*) FROM attestations WHERE deleted_at IS NULL AND expiry_at <= $now")->fetchColumn();
-$stats['del']     = (int)$db->query("SELECT COUNT(*) FROM attestations WHERE deleted_at IS NOT NULL")->fetchColumn();
-$stats['d7']      = (int)$db->query("SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ".strtotime('-7 days'))->fetchColumn();
-$stats['d30']     = (int)$db->query("SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ".strtotime('-30 days'))->fetchColumn();
+// Statistiques
+$stats = [
+    'total'   => (int)$db->query("SELECT COUNT(*) FROM attestations")->fetchColumn(),
+    'actifs'  => (int)$db->query("SELECT COUNT(*) FROM attestations WHERE deleted_at IS NULL AND expiry_at > $now")->fetchColumn(),
+    'exp'     => (int)$db->query("SELECT COUNT(*) FROM attestations WHERE deleted_at IS NULL AND expiry_at <= $now")->fetchColumn(),
+    'del'     => (int)$db->query("SELECT COUNT(*) FROM attestations WHERE deleted_at IS NOT NULL")->fetchColumn(),
+    'd7'      => (int)$db->query("SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ".strtotime('-7 days'))->fetchColumn(),
+    'd30'     => (int)$db->query("SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ".strtotime('-30 days'))->fetchColumn()
+];
 
-// prochains à expirer
-$soonList = $db->query("SELECT nom, prenom, parent_email, expiry_at FROM attestations
-  WHERE deleted_at IS NULL AND expiry_at > $now AND expiry_at <= ".strtotime('+30 days')."
-  ORDER BY expiry_at ASC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-
-// requête liste
+// Requête de la liste
 $where = ["1=1"];
 $params = [];
 if ($search !== '') {
@@ -89,105 +129,139 @@ if ($state === 'deleted')    $where[] = "deleted_at IS NOT NULL";
 if ($state === 'soon')       $where[] = "deleted_at IS NULL AND expiry_at > $now AND expiry_at <= ".strtotime("+$soonDays days");
 
 $whereSql = implode(' AND ', $where);
-$countSql = "SELECT COUNT(*) FROM attestations WHERE $whereSql";
-$stmt = $db->prepare($countSql);
-$stmt->execute($params);
-$totalRows = (int)$stmt->fetchColumn();
+$countStmt = $db->prepare("SELECT COUNT(*) FROM attestations WHERE $whereSql");
+$countStmt->execute($params);
+$totalRows = (int)$countStmt->fetchColumn();
 
 $sql = "SELECT * FROM attestations WHERE $whereSql ORDER BY uploaded_at DESC LIMIT :lim OFFSET :off";
 $stmt = $db->prepare($sql);
-foreach($params as $k=>$v){ $stmt->bindValue($k, $v); }
+foreach($params as $k => $v){ $stmt->bindValue($k, $v); }
 $stmt->bindValue(':lim', $pageSize, PDO::PARAM_INT);
 $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
 $stmt->execute();
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// render
 ?>
 <!doctype html>
-<html lang="fr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Admin – Attestations</title>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tableau de bord – Attestations</title>
 <style>
-:root{--muted:#6b7280}
-body{font-family:system-ui;max-width:1200px;margin:24px auto;padding:0 16px}
-.kpi{display:inline-block;border:1px solid #e5e7eb;padding:10px;border-radius:8px;margin-right:8px}
-table{width:100%;border-collapse:collapse;margin-top:12px}
-th,td{border-bottom:1px solid #eee;padding:8px 6px;text-align:left}
-th{background:#fafafa}
-.pill{display:inline-block;padding:.2rem .45rem;border-radius:999px;border:1px solid #e5e7eb;font-size:.85rem}
-.ok{background:#ecfdf5;color:#065f46;border-color:#a7f3d0}
-.bad{background:#fff5f5;color:#7f1d1d;border-color:#fecaca}
-.muted{color:var(--muted)}
+  :root {
+      --primary: #007bff; --secondary: #6c757d; --success: #198754;
+      --warning: #ffc107; --danger: #dc3545; --light: #f8f9fa; --dark: #212529;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --border-color: #dee2e6; --border-radius: 0.375rem;
+  }
+  body { font-family: var(--font-sans); background-color: #f4f5f7; color: var(--dark); margin: 0; }
+  .container { max-width: 1200px; margin: 2rem auto; padding: 0 1.5rem; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+  .header h1 { margin: 0; }
+  .btn { display: inline-block; padding: 0.5rem 1rem; border-radius: var(--border-radius); text-decoration: none; border: 1px solid transparent; }
+  .btn-logout { background-color: var(--secondary); color: white; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
+  .kpi { background: white; border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--border-radius); text-align: center; }
+  .kpi-label { color: var(--secondary); margin-bottom: 0.5rem; }
+  .kpi-value { font-size: 2.25rem; font-weight: 700; color: var(--primary); }
+  .filters { background: white; border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--border-radius); margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  .filters input, .filters select { padding: 0.5rem; border: 1px solid #ccc; border-radius: var(--border-radius); }
+  .filters button { background-color: var(--primary); color: white; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: var(--border-radius); }
+  .table-container { background: white; border: 1px solid var(--border-color); border-radius: var(--border-radius); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+  th { background-color: var(--light); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-of-type(even) { background-color: var(--light); }
+  .pill { display: inline-block; padding: .25rem .6rem; border-radius: 999px; font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pill.active { background-color: #d1e7dd; color: #0f5132; }
+  .pill.soon { background-color: #fff3cd; color: #664d03; }
+  .pill.expired { background-color: #f8d7da; color: #842029; }
+  .pill.deleted { background-color: #e2e3e5; color: #41464b; }
+  .pagination { margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; color: var(--secondary); }
+  .pagination a { color: var(--primary); text-decoration: none; font-weight: 600; }
 </style>
-</head><body>
-  <h1>Tableau de bord – Attestations</h1>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Tableau de bord des attestations</h1>
+      <a href="?logout=1" class="btn btn-logout">Se déconnecter</a>
+    </header>
 
-  <div>
-    <div class="kpi"><div class="muted">Total</div><strong><?=h($stats['total'])?></strong></div>
-    <div class="kpi"><div class="muted">Actives</div><strong><?=h($stats['actifs'])?></strong></div>
-    <div class="kpi"><div class="muted">Expirées</div><strong><?=h($stats['exp'])?></strong></div>
-    <div class="kpi"><div class="muted">Supprimées</div><strong><?=h($stats['del'])?></strong></div>
-    <div class="kpi"><div class="muted">+7 jours</div><strong><?=h($stats['d7'])?></strong></div>
-    <div class="kpi"><div class="muted">+30 jours</div><strong><?=h($stats['d30'])?></strong></div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Total</div><strong class="kpi-value"><?=h($stats['total'])?></strong></div>
+      <div class="kpi"><div class="kpi-label">Actives</div><strong class="kpi-value" style="color:var(--success)"><?=h($stats['actifs'])?></strong></div>
+      <div class="kpi"><div class="kpi-label">Expirées</div><strong class="kpi-value" style="color:var(--danger)"><?=h($stats['exp'])?></strong></div>
+      <div class="kpi"><div class="kpi-label">Supprimées</div><strong class="kpi-value" style="color:var(--secondary)"><?=h($stats['del'])?></strong></div>
+      <div class="kpi"><div class="kpi-label">+7 jours</div><strong class="kpi-value"><?=h($stats['d7'])?></strong></div>
+      <div class="kpi"><div class="kpi-label">+30 jours</div><strong class="kpi-value"><?=h($stats['d30'])?></strong></div>
+    </div>
+
+    <form method="get" class="filters">
+      <input name="q" placeholder="Rechercher Nom, Prénom, Email..." value="<?=h($search)?>" style="flex-grow:1;">
+      <select name="state">
+        <option value="">Tous les états</option>
+        <option value="active" <?= $state==='active'?'selected':'' ?>>Actives</option>
+        <option value="expired" <?= $state==='expired'?'selected':'' ?>>Expirées</option>
+        <option value="soon" <?= $state==='soon'?'selected':'' ?>>Expire bientôt (<?=h($soonDays)?>j)</option>
+        <option value="deleted" <?= $state==='deleted'?'selected':'' ?>>Supprimées</option>
+      </select>
+      <button type="submit">Filtrer</button>
+      <a href="<?=h($_SERVER['PHP_SELF'])?>">Réinitialiser</a>
+    </form>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Déposé le</th><th>Expire le</th><th>État</th><th>Relance</th></tr>
+        </thead>
+        <tbody>
+          <?php if (!$rows): ?>
+            <tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--secondary);">Aucun résultat pour cette recherche.</td></tr>
+          <?php else:
+            foreach($rows as $r):
+              $e = etat($r, $now);
+              $relance_status = $r['reminder_sent'] ? 'Envoyée' : (($r['expiry_at'] <= $now && empty($r['deleted_at'])) ? 'À envoyer' : '—');
+          ?>
+            <tr>
+              <td><?=h($r['nom'])?></td>
+              <td><?=h($r['prenom'])?></td>
+              <td><?=h($r['parent_email'])?></td>
+              <td><?=h(dt($r['uploaded_at']))?></td>
+              <td><?=h(dt($r['expiry_at']))?></td>
+              <td><span class="pill <?=h($e['class'])?>"><?=h($e['text'])?></span></td>
+              <td><?=h($relance_status)?></td>
+            </tr>
+          <?php endforeach; endif; ?>
+        </tbody>
+      </table>
+    </div>
+    
+    <?php
+      $totalPages = max(1, (int)ceil($totalRows / $pageSize));
+      if ($totalRows > 0):
+    ?>
+    <div class="pagination">
+        <span>Page <?=h($page)?> sur <?=h($totalPages)?> (Total : <?=h($totalRows)?>)</span>
+        <div>
+            <?php if ($page > 1): ?>
+                <a href="?<?=http_build_query(array_merge($qs,['page' => $page - 1]))?>">← Précédent</a>
+            <?php endif; ?>
+            <?php if ($page > 1 && $page < $totalPages): ?>
+                &nbsp;|&nbsp;
+            <?php endif; ?>
+            <?php if ($page < $totalPages): ?>
+                <a href="?<?=http_build_query(array_merge($qs,['page' => $page + 1]))?>">Suivant →</a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <p style="text-align:center; color: var(--secondary); margin-top: 2rem;">
+        Note : Aucun lien de téléchargement direct n'est affiché sur ce tableau de bord pour des raisons de sécurité.
+    </p>
   </div>
-
-  <h3>À échéance sous 30 jours</h3>
-  <div class="muted">
-    <?php if (!$soonList) echo 'R.A.S.'; else foreach($soonList as $s) echo h($s['nom'].' '.$s['prenom']) . ' → ' . h(dt($s['expiry_at'])) . ' · '; ?>
-  </div>
-
-  <form method="get" style="margin-top:12px">
-    <input name="q" placeholder="Nom, Prénom, Email" value="<?=h($search)?>">
-    <select name="state">
-      <option value="">Tous</option>
-      <option value="active" <?= $state==='active'?'selected':'' ?>>Actives</option>
-      <option value="expired" <?= $state==='expired'?'selected':'' ?>>Expirées</option>
-      <option value="soon" <?= $state==='soon'?'selected':'' ?>>Expire bientôt</option>
-      <option value="deleted" <?= $state==='deleted'?'selected':'' ?>>Supprimées</option>
-    </select>
-    <input type="number" name="soon" min="1" max="90" value="<?=h($soonDays)?>">
-    <button type="submit">Filtrer</button>
-    <a href="<?=h($_SERVER['PHP_SELF'])?>">Réinitialiser</a>
-  </form>
-
-  <table>
-    <thead>
-      <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Déposé le</th><th>Expire le</th><th>État</th><th>Relance</th></tr>
-    </thead>
-    <tbody>
-      <?php if (!$rows) { ?>
-        <tr><td colspan="7" class="muted">Aucun résultat</td></tr>
-      <?php } else {
-        foreach($rows as $r){
-          $e = etat($r,$now);
-          $badgeClass = $e==='Active' ? 'ok' : 'bad';
-          $rel = $r['reminder_sent'] ? 'Envoyée' : (($r['expiry_at'] <= $now) ? 'À envoyer' : '—');
-      ?>
-        <tr>
-          <td><?=h($r['nom'])?></td>
-          <td><?=h($r['prenom'])?></td>
-          <td><?=h($r['parent_email'])?></td>
-          <td><?=h(dt($r['uploaded_at']))?></td>
-          <td><?=h(dt($r['expiry_at']))?></td>
-          <td><span class="pill <?=$badgeClass?>"><?=h($e)?></span></td>
-          <td><?=h($rel)?></td>
-        </tr>
-      <?php } } ?>
-    </tbody>
-  </table>
-
-  <?php
-    $pages = max(1, (int)ceil($totalRows / $pageSize));
-    echo '<div style="margin-top:10px;color:var(--muted)">';
-    echo 'Page '.h($page).' / '.h($pages).' · Total '.h($totalRows);
-    if ($pages>1) {
-      if ($page>1) echo ' · <a href="?'.http_build_query(array_merge($qs,['page'=>$page-1])).'">← Préc.</a>';
-      if ($page<$pages) echo ' · <a href="?'.http_build_query(array_merge($qs,['page'=>$page+1])).'">Suiv. →</a>';
-    }
-    echo '</div>';
-  ?>
-
-  <p class="muted">NB : Aucun lien de téléchargement n’est affiché ici.</p>
-  <p><a href="?logout=1">Se déconnecter</a></p>
-</body></html>
+</body>
+</html>

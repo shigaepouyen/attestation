@@ -1,84 +1,242 @@
 <?php
 // public/index.php
 session_start();
-if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16));
+if (empty($_SESSION['csrf'])) {
+    $_SESSION['csrf'] = bin2hex(random_bytes(32));
+}
 $csrf = $_SESSION['csrf'];
 ?>
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Déposer votre attestation</title>
+<meta charset="utf--8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Déposer votre attestation d’honorabilité</title>
 <style>
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.45}
-  .card{border:1px solid #ddd;border-radius:10px;padding:18px}
-  label{display:block;margin:.7rem 0 .25rem}
-  input,button{width:100%;padding:.7rem;border:1px solid #bbb;border-radius:8px}
-  .row{display:flex;gap:12px}.row>div{flex:1}
-  .hint{color:#555;font-size:.95rem}
-  .hp{position:absolute;left:-5000px}
+  :root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --background-color: #f8f9fa;
+    --text-color: #212529;
+    --heading-color: #343a40;
+    --border-color: #dee2e6;
+    --card-background: #ffffff;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --border-radius: 0.5rem;
+    --box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 2rem 1rem;
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  header h1 {
+    color: var(--heading-color);
+    font-size: 2.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  header p {
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+  }
+
+  .card {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 2.5rem;
+    box-shadow: var(--box-shadow);
+    margin-bottom: 2rem;
+  }
+
+  .info-box {
+    background-color: #e9f7ff;
+    color: #0056b3;
+    border: 1px solid #b8daff;
+    border-left: 5px solid var(--primary-color);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: var(--border-radius);
+  }
+
+  .info-box strong {
+    color: var(--primary-color);
+  }
+
+  ol {
+    padding-left: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  li {
+    margin-bottom: 0.75rem;
+  }
+
+  a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  form .row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  form .row > div {
+    flex: 1;
+  }
+
+  form input {
+    width: 100%;
+    padding: 0.8rem;
+    border: 1px solid #ced4da;
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  form input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    outline: none;
+  }
+
+  form input[type="file"] {
+    padding: 0.5rem;
+  }
+
+  form button {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: var(--border-radius);
+    background-color: var(--primary-color);
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 1.5rem;
+    transition: background-color 0.2s;
+  }
+
+  form button:hover {
+    background-color: #0056b3;
+  }
+
+  .hint {
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    margin-top: 1rem;
+    text-align: center;
+  }
+
+  /* Champ honeypot pour les bots */
+  .hp {
+    position: absolute;
+    left: -5000px;
+  }
+  
+  /* Responsive */
+  @media (max-width: 600px) {
+    form .row {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+
 </style>
 </head>
 <body>
-  <h1>Déposer votre attestation d’honorabilité</h1>
+  <div class="container">
+    <header>
+      <h1>Déposer votre attestation d’honorabilité</h1>
+      <p>Un processus simple et sécurisé pour les intervenants.</p>
+    </header>
 
-  <p style="color:#374151;line-height:1.5;margin-bottom:1rem">
-    Dans le cadre de la réglementation en vigueur, toute personne intervenant auprès des élèves
-    (par exemple dans le cadre du BDI, d’une sortie scolaire ou d’une animation) doit fournir une
-    <strong>attestation d’honorabilité</strong>.  
-  </p>
+    <div class="card">
+      <h2>Instructions</h2>
+      <p>
+        Dans le cadre de la réglementation, toute personne intervenant auprès des élèves doit fournir une <strong>attestation d’honorabilité</strong>.
+      </p>
 
-  <p style="color:#374151;line-height:1.5;margin-bottom:1rem">
-    Cette attestation est délivrée par le <strong>Ministère de l’Éducation nationale</strong> à l’issue
-    d’une simple démarche en ligne :  
-  </p>
+      <ol>
+        <li>
+          Rendez-vous sur le site officiel :
+          <a href="https://honorabilite.social.gouv.fr/jai-besoin-dune-attestation-dhonorabilite" target="_blank" rel="noopener noreferrer">honorabilite.social.gouv.fr</a>
+        </li>
+        <li>Saisissez vos informations et validez la demande.</li>
+        <li>Vous recevrez un e-mail du ministère avec un lien pour télécharger votre attestation au format PDF.</li>
+        <li>Une fois le PDF obtenu, revenez sur cette page pour le déposer via le formulaire ci-dessous.</li>
+      </ol>
+      <p>
+        L’attestation est valable <strong>6 mois</strong>. Le système vous enverra un rappel unique par e-mail avant son expiration.
+      </p>
+    </div>
 
-  <ol style="color:#374151;line-height:1.6;margin-bottom:1rem;padding-left:1.4rem">
-    <li>Rendez-vous sur le site officiel :
-        <a href="https://honorabilite.social.gouv.fr/jai-besoin-dune-attestation-dhonorabilite"
-           target="_blank" rel="noopener noreferrer">honorabilite.social.gouv.fr</a></li>
-    <li>Saisissez vos informations d’identité et validez la demande.</li>
-    <li>Quelques jours plus tard, vous recevrez un e-mail du ministère avec un lien
-        pour télécharger votre attestation (format PDF).</li>
-    <li>Une fois le PDF téléchargé, revenez sur cette page pour le déposer ci-dessous.</li>
-  </ol>
+    <div class="info-box">
+      <strong>Important :</strong> Votre adresse e-mail est essentielle. Elle nous permet d'associer le document à votre dossier et de vous notifier lorsque le renouvellement est nécessaire.
+    </div>
 
-  <p style="color:#374151;line-height:1.5;margin-bottom:1.5rem">
-    L’attestation est valable <strong>6 mois</strong>.  
-    Vous serez automatiquement invité à la renouveler une seule fois lorsque sa validité arrivera à échéance.
-  </p>
+    <div class="card">
+      <h2>Formulaire de dépôt</h2>
+      <form action="upload.php" method="post" enctype="multipart/form-data" novalidate>
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
+        <div class="hp"><label>Ne pas remplir</label><input name="website" autocomplete="off"></div>
 
-  <p style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem">
-    💡 <strong>Important :</strong> votre adresse e-mail est obligatoire.  
-    Elle nous permet d’associer le document à votre dossier et de vous prévenir lorsque
-    l’attestation devra être renouvelée.
-  </p>
-
-  <div class="card">
-    <form action="upload.php" method="post" enctype="multipart/form-data" novalidate>
-      <input type="hidden" name="csrf" value="<?=htmlspecialchars($csrf)?>">
-      <div class="hp"><label>Ne pas remplir</label><input name="website" autocomplete="off"></div>
-
-      <div class="row">
-        <div>
-          <label for="nom">Nom</label>
-          <input id="nom" name="nom" required autocomplete="family-name" placeholder="DURAND">
+        <div class="row">
+          <div>
+            <label for="nom">Nom de l'intervenant</label>
+            <input id="nom" name="nom" required autocomplete="family-name" placeholder="Par exemple : DURAND">
+          </div>
+          <div>
+            <label for="prenom">Prénom de l'intervenant</label>
+            <input id="prenom" name="prenom" required autocomplete="given-name" placeholder="Par exemple : Sophie">
+          </div>
         </div>
+
         <div>
-          <label for="prenom">Prénom</label>
-          <input id="prenom" name="prenom" required autocomplete="given-name" placeholder="Sophie">
+            <label for="email">Votre e-mail (obligatoire)</label>
+            <input id="email" name="email" type="email" required placeholder="sophie.durand@email.fr" autocomplete="email">
         </div>
-      </div>
-
-      <label for="email">E-mail (obligatoire)</label>
-      <input id="email" name="email" type="email" required placeholder="prenom.nom@email.fr">
-
-      <label for="pdf">Attestation (PDF uniquement)</label>
-      <input id="pdf" name="pdf" type="file" accept="application/pdf,.pdf" required>
-
-      <p class="hint">Nous supprimerons automatiquement l’attestation à l’expiration (6 mois) et enverrons un rappel unique.</p>
-      <button type="submit">Envoyer</button>
-    </form>
+        
+        <div style="margin-top: 1.5rem;">
+            <label for="pdf">Votre attestation (Fichier PDF uniquement)</label>
+            <input id="pdf" name="pdf" type="file" accept="application/pdf,.pdf" required>
+        </div>
+        
+        <p class="hint">Le fichier sera stocké de manière sécurisée et supprimé automatiquement après 6 mois.</p>
+        <button type="submit">Envoyer mon attestation</button>
+      </form>
+    </div>
   </div>
 </body>
 </html>
