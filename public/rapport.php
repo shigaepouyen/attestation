@@ -56,9 +56,15 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         .header p { margin: 0; font-size: 1.1rem; }
         .btn-archive {
             display: inline-block; padding: 0.75rem 1.5rem; background-color: var(--success); color: #fff;
-            text-decoration: none; border-radius: 6px; font-weight: 600; transition: background-color 0.2s;
+            text-decoration: none; border-radius: 6px; font-weight: 600; transition: background-color 0.2s, opacity 0.2s;
+            cursor: pointer;
         }
         .btn-archive:hover { background-color: #218838; }
+        .btn-archive.is-loading {
+            background-color: #6c757d;
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
         thead th { background-color: var(--light); }
@@ -80,7 +86,7 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
                 <p>Liste de toutes les attestations valides au <?= h(date('d/m/Y')) ?>.</p>
             </div>
             <?php if (!empty($rows)): ?>
-                <a href="archive.php?token=<?= h($requestToken) ?>" class="btn-archive">Télécharger tout (ZIP)</a>
+                <a href="archive.php?token=<?= h($requestToken) ?>" class="btn-archive" id="download-zip-btn">Télécharger tout (ZIP)</a>
             <?php endif; ?>
         </div>
 
@@ -111,5 +117,18 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
             </table>
         <?php endif; ?>
     </div>
+    <script>
+        const downloadBtn = document.getElementById('download-zip-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function(e) {
+                if (this.classList.contains('is-loading')) {
+                    e.preventDefault();
+                    return;
+                }
+                this.classList.add('is-loading');
+                this.textContent = 'Préparation du ZIP...';
+            });
+        }
+    </script>
 </body>
 </html>
