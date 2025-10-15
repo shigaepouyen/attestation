@@ -24,7 +24,7 @@ if ($newSubmissionsCount === 0) {
 // Étape 2: Générer un "master token" unique pour l'accès à la page de rapport.
 // On le stocke dans un fichier temporaire pour que la page de rapport puisse le vérifier.
 $masterToken = bin2hex(random_bytes(32));
-$tokenFile = rtrim($config['storage_dir'], '/') . '/../storage/master_token.txt';
+$tokenFile = dirname($config['storage_dir']) . '/master_token.txt';
 // Le token est valable 2 semaines pour laisser le temps de consulter le rapport.
 $tokenData = json_encode(['token' => $masterToken, 'expiry' => time() + (14 * 24 * 60 * 60)]);
 file_put_contents($tokenFile, $tokenData);

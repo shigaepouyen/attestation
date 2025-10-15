@@ -6,7 +6,7 @@
 $config = require __DIR__ . '/../config.php';
 
 // --- Validation du Master Token ---
-$tokenFile = rtrim($config['storage_dir'], '/') . '/../storage/master_token.txt';
+$tokenFile = dirname($config['storage_dir']) . '/master_token.txt';
 if (!file_exists($tokenFile)) {
     http_response_code(403);
     die('Accès interdit (token invalide).');
