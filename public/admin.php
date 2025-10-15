@@ -186,6 +186,9 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
   .flash-msg { padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1.5rem; border: 1px solid; }
   .flash-success { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
   .flash-error { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; }
+  .global-actions { background: white; border: 1px solid var(--border-color); padding: 1.5rem; border-radius: var(--border-radius); margin-top: 2rem; border-left: 5px solid var(--danger); }
+  .global-actions h3 { margin-top: 0; }
+  .btn-danger { background-color: var(--danger); color: white; border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: var(--border-radius); }
 </style>
 </head>
 <body>
@@ -282,6 +285,17 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <p style="text-align:center; color: var(--secondary); margin-top: 2rem;">
         Note : Aucun lien de téléchargement direct n'est affiché sur ce tableau de bord pour des raisons de sécurité.
     </p>
+
+    <div class="global-actions">
+      <h3>Actions Globales (irréversibles)</h3>
+      <p>Attention : L'action suivante supprimera <strong>toutes</strong> les attestations de la base de données et <strong>tous</strong> les fichiers téléversés dans le stockage. Cette opération est définitive.</p>
+      <a href="admin_actions.php?action=global_reset" 
+         class="btn btn-danger" 
+         onclick="return confirm('Êtes-vous absolument sûr de vouloir tout effacer ?\nCette action est IRREVERSIBLE et supprimera toutes les données et tous les fichiers.')">
+         Réinitialisation Globale
+      </a>
+    </div>
+
   </div>
 </body>
 </html>

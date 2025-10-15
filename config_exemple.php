@@ -18,6 +18,7 @@ return [
 
   // Destinataire du digest hebdo (exemple)
   'director_email' => 'direction@exemple.fr',
+  'director_title' => 'Madame la Directrice',
 
   // SMTP via Google Workspace (expéditeur)
   'smtp' => [

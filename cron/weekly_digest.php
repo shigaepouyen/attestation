@@ -32,8 +32,9 @@ file_put_contents($tokenFile, $tokenData);
 // Étape 3: Préparer et envoyer l'e-mail.
 $subject = "[APEL St Jo] Attestation honorabilité - " . date('Y-m-d');
 $reportLink = rtrim($config['site_base_url'], '/') . '/rapport.php?token=' . $masterToken;
+$directorTitle = $config['director_title'] ?? '';
 
-$body = "Bonjour Madame la Directrice,\n\n";
+$body = "Bonjour " . $directorTitle . ",\n\n";
 $body .= "Il y a eu " . $newSubmissionsCount . " nouveau(x) dépôt(s) d'attestation cette semaine.\n\n";
 $body .= "Vous pouvez consulter la liste complète et à jour de toutes les attestations valides en cliquant sur le lien sécurisé ci-dessous :\n\n";
 $body .= "$reportLink\n\n";

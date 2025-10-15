@@ -13,9 +13,39 @@ $config = require __DIR__ . '/../config.php';
 require_once __DIR__ . '/../lib/sendmail.php';
 
 $action = $_GET['action'] ?? '';
-$id = (int)($_GET['id'] ?? 0);
 $now = time();
 
+// Action de réinitialisation globale (ne nécessite pas d'ID)
+if ($action === 'global_reset') {
+    try {
+        $db = new PDO('sqlite:' . $config['db_file']);
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // 1. Vider la table des attestations
+        $db->exec('DELETE FROM attestations');
+
+        // 2. Supprimer tous les fichiers dans le répertoire de stockage
+        $storageDir = rtrim($config['storage_dir'], '/');
+        $files = glob($storageDir . '/*');
+        foreach ($files as $file) {
+            // S'assurer de ne pas supprimer des sous-répertoires ou des fichiers cachés importants
+            if (is_file($file) && basename($file) !== '.gitkeep') {
+                @unlink($file);
+            }
+        }
+        
+        header('Location: admin.php?action_success=1');
+        exit;
+
+    } catch (Exception $e) {
+        error_log("Global reset failed: " . $e->getMessage());
+        header('Location: admin.php?error=Exception_GlobalReset');
+        exit;
+    }
+}
+
+// Actions nécessitant un ID
+$id = (int)($_GET['id'] ?? 0);
 if ($id <= 0 || !in_array($action, ['delete', 'remind'])) {
     header('Location: admin.php?error=InvalidAction');
     exit;
