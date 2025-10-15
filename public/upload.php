@@ -257,6 +257,34 @@ try {
 }
 
 // -------------------------------
+// Envoi de l'e-mail de confirmation
+// -------------------------------
+require_once __DIR__ . '/../lib/sendmail.php';
+
+$expiry_date_formatted = date('d/m/Y', $expiry);
+$site_link = rtrim($config['site_base_url'] ?? '', '/') . '/';
+$subject = "Confirmation de dépôt de votre attestation d'honorabilité";
+$body = <<<EOT
+Bonjour {$prenom} {$nom},
+
+Nous vous confirmons la bonne réception de votre attestation d'honorabilité.
+Elle a été enregistrée avec succès et est valide jusqu'au {$expiry_date_formatted}.
+
+Pour toute nouvelle démarche, vous pouvez utiliser le lien suivant :
+{$site_link}
+
+Nous vous remercions pour votre coopération.
+
+Cordialement,
+L'équipe de l'APEL
+EOT;
+
+if (!sendMail($parent_email, $subject, $body, $config)) {
+    write_log($uploadLog, "[" . date('c') . "] Echec de l'envoi de l'email de confirmation à " . $parent_email);
+}
+
+
+// -------------------------------
 // Page de confirmation
 // -------------------------------
 ?>
@@ -340,6 +368,7 @@ try {
     <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
     <h1>Merci, c'est enregistré !</h1>
     <p>Votre attestation a bien été reçue et stockée de manière sécurisée.</p>
+    <p style="font-size: 0.9rem; color: #6c757d;">Un e-mail de confirmation vient de vous être envoyé. S'il n'apparaît pas dans votre boîte de réception, pensez à vérifier votre dossier de courriers indésirables (spam).</p>
 
     <div class="details">
       <p><strong>Nom du fichier :</strong> <?= htmlspecialchars(basename($destPath), ENT_QUOTES, 'UTF-8') ?></p>
