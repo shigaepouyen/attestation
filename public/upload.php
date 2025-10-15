@@ -218,7 +218,8 @@ try {
     $token = bin2hex(random_bytes(24));
 
     $db->beginTransaction();
-    $stmt = $db->prepare('SELECT * FROM attestations WHERE parent_email = ? AND deleted_at IS NULL');
+    // On cherche une attestation existante pour cet email, même si elle a été supprimée
+    $stmt = $db->prepare('SELECT * FROM attestations WHERE parent_email = ?');
     $stmt->execute([$parent_email]);
     $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
