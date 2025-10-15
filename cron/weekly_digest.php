@@ -12,7 +12,7 @@ require_once __DIR__ . '/../lib/sendmail.php';
 
 // Étape 1: Vérifier s'il y a eu de nouveaux dépôts cette semaine.
 $since = strtotime('-7 days');
-$checkNewStmt = $db->prepare('SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ?');
+$checkNewStmt = $db->prepare('SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ? AND deleted_at IS NULL');
 $checkNewStmt->execute([$since]);
 $newSubmissionsCount = (int)$checkNewStmt->fetchColumn();
 
@@ -24,7 +24,7 @@ if ($newSubmissionsCount === 0) {
 // Étape 2: Générer un "master token" unique pour l'accès à la page de rapport.
 // On le stocke dans un fichier temporaire pour que la page de rapport puisse le vérifier.
 $masterToken = bin2hex(random_bytes(32));
-$tokenFile = dirname($config['storage_dir']) . '/master_token.txt';
+// Étape 1: Vérifier s'il y a eu de nouveaux dépôts cette semaine (uniquement les actifs).
 // Le token est valable 2 semaines pour laisser le temps de consulter le rapport.
 $tokenData = json_encode(['token' => $masterToken, 'expiry' => time() + (14 * 24 * 60 * 60)]);
 file_put_contents($tokenFile, $tokenData);
