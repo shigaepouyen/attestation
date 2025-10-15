@@ -29,4 +29,3 @@ Thumbs.db
 *.zip
 db/attestations.sqlite
 attestations.sqlite
-db/attestations.sqlite
