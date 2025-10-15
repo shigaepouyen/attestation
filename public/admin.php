@@ -99,7 +99,7 @@ function etat($row, $now){
 // Filtres & pagination
 $qs = $_GET;
 $search = trim($qs['q'] ?? '');
-$state = trim($qs['state'] ?? '');
+$state = trim($qs['state'] ?? 'active');
 $soonDays = (int)($qs['soon'] ?? 30);
 $page = max(1, (int)($qs['page'] ?? 1));
 $pageSize = (int)($config['admin']['page_size'] ?? 25);
