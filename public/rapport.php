@@ -118,17 +118,24 @@ function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
         <?php endif; ?>
     </div>
     <script>
-        const downloadBtn = document.getElementById('download-zip-btn');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', function(e) {
-                if (this.classList.contains('is-loading')) {
-                    e.preventDefault();
-                    return;
-                }
-                this.classList.add('is-loading');
-                this.textContent = 'Préparation du ZIP...';
-            });
-        }
+    const downloadBtn = document.getElementById('download-zip-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function(e) {
+            if (this.classList.contains('is-loading')) {
+                e.preventDefault();
+                return;
+            }
+            this.classList.add('is-loading');
+            this.textContent = 'Préparation du ZIP...';
+
+            // Réactive le bouton après 10 secondes pour éviter qu'il ne reste bloqué
+            // si l'utilisateur annule le téléchargement ou si le serveur répond rapidement.
+            setTimeout(() => {
+                this.classList.remove('is-loading');
+                this.textContent = 'Télécharger tout (ZIP)';
+            }, 10000);
+        });
+    }
     </script>
 </body>
 </html>
