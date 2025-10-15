@@ -378,7 +378,6 @@ if (!sendMail($parent_email, $subject, $body, $config)) {
 
     <div class="actions">
       <a class="btn btn-primary" href="index.php">Retour au formulaire</a>
-      <a class="btn btn-secondary" href="javascript:window.print()">Imprimer cette page</a>
     </div>
   </div>
 </body>
