@@ -181,6 +181,11 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
   .pill.deleted { background-color: #e2e3e5; color: #41464b; }
   .pagination { margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; color: var(--secondary); }
   .pagination a { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .actions-cell a { color: var(--primary); text-decoration:none; margin-right:10px; }
+  .actions-cell a.danger { color: var(--danger); }
+  .flash-msg { padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1.5rem; border: 1px solid; }
+  .flash-success { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; }
+  .flash-error { background-color: #f8d7da; color: #842029; border-color: #f5c2c7; }
 </style>
 </head>
 <body>
@@ -189,6 +194,13 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <h1>Tableau de bord des attestations</h1>
       <a href="?logout=1" class="btn btn-logout">Se déconnecter</a>
     </header>
+
+    <?php if (isset($_GET['action_success'])): ?>
+      <div class="flash-msg flash-success">L'action a été effectuée avec succès.</div>
+    <?php endif; ?>
+    <?php if (isset($_GET['error'])): ?>
+      <div class="flash-msg flash-error">Une erreur est survenue : <?= h($_GET['error']) ?></div>
+    <?php endif; ?>
 
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">Total</div><strong class="kpi-value"><?=h($stats['total'])?></strong></div>
@@ -215,11 +227,11 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="table-container">
       <table>
         <thead>
-          <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Déposé le</th><th>Expire le</th><th>État</th><th>Relance</th></tr>
+          <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Déposé le</th><th>Expire le</th><th>État</th><th>Relance</th><th>Actions</th></tr>
         </thead>
         <tbody>
           <?php if (!$rows): ?>
-            <tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--secondary);">Aucun résultat pour cette recherche.</td></tr>
+            <tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--secondary);">Aucun résultat pour cette recherche.</td></tr>
           <?php else:
             foreach($rows as $r):
               $e = etat($r, $now);
@@ -233,6 +245,14 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
               <td><?=h(dt($r['expiry_at']))?></td>
               <td><span class="pill <?=h($e['class'])?>"><?=h($e['text'])?></span></td>
               <td><?=h($relance_status)?></td>
+              <td class="actions-cell">
+                <?php if (empty($r['deleted_at'])): ?>
+                  <a href="admin_actions.php?action=remind&id=<?=h($r['id'])?>" title="Envoyer un rappel maintenant">Rappel</a>
+                  <a href="admin_actions.php?action=delete&id=<?=h($r['id'])?>" class="danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette attestation ? Cette action est irréversible.')" title="Supprimer manuellement">Supprimer</a>
+                <?php else: ?>
+                  —
+                <?php endif; ?>
+              </td>
             </tr>
           <?php endforeach; endif; ?>
         </tbody>

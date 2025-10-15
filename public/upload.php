@@ -257,6 +257,34 @@ try {
 }
 
 // -------------------------------
+// Envoi de l'e-mail de confirmation
+// -------------------------------
+require_once __DIR__ . '/../lib/sendmail.php';
+
+$expiry_date_formatted = date('d/m/Y', $expiry);
+$site_link = rtrim($config['site_base_url'] ?? '', '/') . '/';
+$subject = "Confirmation de dépôt de votre attestation d'honorabilité";
+$body = <<<EOT
+Bonjour {$prenom} {$nom},
+
+Nous vous confirmons la bonne réception de votre attestation d'honorabilité.
+Elle a été enregistrée avec succès et est valide jusqu'au {$expiry_date_formatted}.
+
+Pour toute nouvelle démarche, vous pouvez utiliser le lien suivant :
+{$site_link}
+
+Nous vous remercions pour votre coopération.
+
+Cordialement,
+L'équipe de l'APEL
+EOT;
+
+if (!sendMail($parent_email, $subject, $body, $config)) {
+    write_log($uploadLog, "[" . date('c') . "] Echec de l'envoi de l'email de confirmation à " . $parent_email);
+}
+
+
+// -------------------------------
 // Page de confirmation
 // -------------------------------
 ?>
