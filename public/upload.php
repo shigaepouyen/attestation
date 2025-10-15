@@ -97,12 +97,15 @@ function fail($msg, $httpCode = 400) {
     exit;
 }
 
-function clean_label($s) {
-    $s = trim((string)$s);
-    $s = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $s);
-    $s = preg_replace('/[^A-Za-z0-9 \-_]/', '', $s);
-    $s = preg_replace('/\s+/', '_', $s);
-    return $s === '' ? 'Inconnu' : trim($s, '_-');
+function generate_uuidv4() {
+    // Génère 16 octets (128 bits) de données aléatoires
+    $data = random_bytes(16);
+    // Définit le bit de version (4)
+    $data[6] = chr(ord($data[6]) & 0x0f | 0x40);
+    // Définit le bit de variante (RFC 4122)
+    $data[8] = chr(ord($data[8]) & 0x3f | 0x80);
+    // Retourne l'UUID formaté
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($data), 4));
 }
 
 function write_log($path, $line) {
@@ -139,18 +142,24 @@ if (!empty($_POST['website'])) {
 // -------------------------------
 // Validation des champs
 // -------------------------------
-$nom_raw    = $_POST['nom'] ?? '';
-$prenom_raw = $_POST['prenom'] ?? '';
-$email_raw  = $_POST['email'] ?? '';
+$nom_raw    = trim($_POST['nom'] ?? '');
+$prenom_raw = trim($_POST['prenom'] ?? '');
+$email_raw  = trim($_POST['email'] ?? '');
 
-$nom    = clean_label($nom_raw);
-$prenom = clean_label($prenom_raw);
 $parent_email = filter_var($email_raw, FILTER_VALIDATE_EMAIL);
 
 write_log($uploadLog, "[" . date('c') . "] Tentative d'upload par " . ($parent_email ?: 'NO_EMAIL') . " (nom={$nom_raw}, prenom={$prenom_raw}) IP=" . ($_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN'));
 
-if (!$nom || !$prenom) fail('Le nom et le prénom sont requis.');
-if (!$parent_email) fail('Une adresse e-mail valide est obligatoire.');
+if (empty($nom_raw) || empty($prenom_raw)) {
+    fail('Le nom et le prénom sont requis.');
+}
+if (!$parent_email) {
+    fail('Une adresse e-mail valide est obligatoire.');
+}
+
+// Nettoyage simple pour la base de données
+$nom = htmlspecialchars($nom_raw, ENT_QUOTES, 'UTF-8');
+$prenom = htmlspecialchars($prenom_raw, ENT_QUOTES, 'UTF-8');
 
 // -------------------------------
 // Validation du fichier
@@ -185,15 +194,11 @@ if (!is_dir($storageDir) || !is_writable($storageDir)) {
     fail('Erreur serveur : le stockage est impossible (vérifier les permissions).', 500);
 }
 
-$date = date('Ymd');
-$baseName = "{$nom}_{$prenom}_{$date}";
-$finalName = $baseName . ($config['filename_suffix'] ?? '_AttestationHonorabilite.pdf');
-$destPath = $storageDir . '/' . $finalName;
-$counter = 1;
-while (file_exists($destPath)) {
-    $destPath = $storageDir . '/' . $baseName . "_{$counter}" . ($config['filename_suffix'] ?? '_AttestationHonorabilite.pdf');
-    $counter++;
-}
+// Génération d'un nom de fichier unique et non devinable
+$uuid = generate_uuidv4();
+$fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+$finalName = "{$uuid}.{$fileExtension}";
+$destPath = rtrim($storageDir, '/') . '/' . $finalName;
 
 if (!move_uploaded_file($file['tmp_name'], $destPath)) {
     fail('Erreur interne : impossible de déplacer le fichier.', 500);
