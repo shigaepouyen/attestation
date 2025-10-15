@@ -280,7 +280,7 @@ Elle a été enregistrée avec succès et est valide jusqu'au {$expiry_date_form
 Pour toute nouvelle démarche, vous pouvez utiliser le lien suivant :
 {$site_link}
 
-Notez que conformément à notre politique de confidentialité, ce document sera conservé pendant {$retention_text} après sa date d'expiration, puis sera définitivement supprimé de nos systèmes.
+Notez que ce document remplace toute attestation précédemment fournie. Si cette attestation n'est pas renouvelée, elle sera conservée pendant {$retention_text} après sa date d'expiration avant d'être définitivement supprimée de nos systèmes.
 
 Nous vous remercions pour votre coopération.
 
@@ -383,7 +383,7 @@ if (!sendMail($parent_email, $subject, $body, $config)) {
       <p><strong>Nom du fichier :</strong> <?= htmlspecialchars(basename($destPath), ENT_QUOTES, 'UTF-8') ?></p>
       <p><strong>Déposé le :</strong> <?= date('d/m/Y à H:i', $now) ?></p>
       <p><strong>Valide jusqu’au :</strong> <?= date('d/m/Y', $expiry) ?> (6 mois)</p>
-      <p style="margin-top: 1rem; font-size: 0.9rem; color: #6c757d;">Conformément à notre politique, ce document sera conservé pendant <?= htmlspecialchars($retention_text, ENT_QUOTES, 'UTF-8') ?> après sa date d'expiration avant d'être définitivement supprimé de nos systèmes.</p>
+      <p style="margin-top: 1rem; font-size: 0.9rem; color: #6c757d;">Ce document remplace toute attestation précédemment fournie. Si cette attestation n'est pas renouvelée, elle sera conservée pendant <?= htmlspecialchars($retention_text, ENT_QUOTES, 'UTF-8') ?> après sa date d'expiration avant d'être définitivement supprimée de nos systèmes.</p>
     </div>
 
     <div class="actions">
