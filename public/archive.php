@@ -36,18 +36,18 @@ try {
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $now = time();
     $stmt = $db->prepare(
-        'SELECT filename FROM attestations 
+        'SELECT nom, prenom, filename FROM attestations
          WHERE deleted_at IS NULL AND expiry_at > ?'
     );
     $stmt->execute([$now]);
-    $files = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Exception $e) {
     http_response_code(500);
     die("Erreur lors de l'accès à la base de données.");
 }
 
-if (empty($files)) {
+if (empty($records)) {
     die("Aucune attestation valide à archiver.");
 }
 
@@ -64,10 +64,16 @@ if ($zip->open($tempZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== TRU
 $storageDir = $config['storage_dir'];
 $filesAdded = 0;
 
-foreach ($files as $filename) {
-    $filePath = $storageDir . '/' . $filename;
+foreach ($records as $record) {
+    $filePath = $storageDir . '/' . $record['filename'];
     if (file_exists($filePath)) {
-        $zip->addFile($filePath, $filename);
+        // Construction d'un nom de fichier lisible
+        $friendly_filename = sprintf(
+            'Attestation-%s-%s.pdf',
+            preg_replace('/[^a-zA-Z0-9-]/', '', $record['prenom']),
+            preg_replace('/[^a-zA-Z0-9-]/', '', $record['nom'])
+        );
+        $zip->addFile($filePath, $friendly_filename);
         $filesAdded++;
     }
 }
@@ -75,7 +81,7 @@ foreach ($files as $filename) {
 $zip->close();
 
 if ($filesAdded === 0) {
-    unlink($tempZipPath);
+    @unlink($tempZipPath);
     die("Les fichiers des attestations sont introuvables sur le serveur.");
 }
 
