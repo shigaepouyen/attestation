@@ -36,5 +36,8 @@ return [
     'user' => 'admin',
     'pass_hash' => 'HASH_ADMIN',
     'page_size' => 25
-  ]
+  ],
+
+  // Nombre de jours avant purge définitive des attestations supprimées
+  'purge_deleted_after_days' => 365
 ];
