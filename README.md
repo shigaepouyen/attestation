@@ -9,7 +9,7 @@ Une application PHP simple et robuste pour collecter, suivre et gérer les attes
 *   **Portail de Dépôt Public** : Un formulaire simple et sécurisé pour que les intervenants puissent téléverser leur attestation au format PDF.
 *   **Date de Fin de Validité** : Le formulaire propose une date de fin de validité par défaut (6 mois à partir du jour même), que l'utilisateur peut ajuster si nécessaire.
 *   **Tableau de Bord Administrateur** : Une interface sécurisée pour les administrateurs avec des statistiques, une liste filtrable des attestations et des actions manuelles (rappel, suppression).
-*   **Rappels Automatiques** : Un script cron envoie des rappels par e-mail aux intervenants avant l'expiration de leur attestation.
+*   **Rappels Automatiques Intelligents** : Un script cron envoie des rappels par e-mail aux intervenants avant l'expiration de leur attestation, mais uniquement durant la période scolaire (septembre à juin) et seulement si l'attestation expire avant la fin de l'année scolaire en cours.
 *   **Purge Automatique** : Les attestations expirées sont automatiquement marquées comme supprimées et les fichiers associés sont effacés.
 *   **Portail pour la Direction** : Un lien sécurisé, envoyé par e-mail, permet à la direction de consulter la liste des attestations actives et de télécharger une archive ZIP.
 *   **Journalisation** : Les actions importantes (uploads, erreurs) sont journalisées pour l'audit.

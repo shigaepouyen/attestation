@@ -10,14 +10,36 @@ require_once __DIR__ . '/../lib/sendmail.php';
 $now = time();
 $log_prefix = "[" . date('c') . "] ";
 
+// --- Logique de l'année scolaire ---
+$current_month = (int)date('m', $now);
+$current_year = (int)date('Y', $now);
+
+// L'année scolaire est de Septembre (9) à Juin (6)
+$is_school_period = ($current_month >= 9 || $current_month <= 6);
+
+if (!$is_school_period) {
+    echo $log_prefix . "Hors période scolaire (Juillet/Août). Aucune relance envoyée.\n";
+    exit;
+}
+
+// Déterminer la date de fin de l'année scolaire en cours (30 juin)
+$school_year_end_year = ($current_month >= 9) ? $current_year + 1 : $current_year;
+$school_year_end_date = strtotime($school_year_end_year . '-06-30 23:59:59');
+
 // --- 1. Envoi des pré-rappels (15 jours avant expiration) ---
 $reminder_days = 15;
 $reminder_threshold = strtotime("+{$reminder_days} days", $now);
 
+// On ne relance que si l'attestation expire AVANT la fin de l'année scolaire.
 $stmt_prereminder = $db->prepare(
-    'SELECT * FROM attestations WHERE expiry_at > ? AND expiry_at <= ? AND reminder_sent = 0 AND deleted_at IS NULL'
+    'SELECT * FROM attestations WHERE
+        expiry_at > ? AND
+        expiry_at <= ? AND
+        expiry_at < ? AND
+        reminder_sent = 0 AND
+        deleted_at IS NULL'
 );
-$stmt_prereminder->execute([$now, $reminder_threshold]);
+$stmt_prereminder->execute([$now, $reminder_threshold, $school_year_end_date]);
 $prereminder_rows = $stmt_prereminder->fetchAll(PDO::FETCH_ASSOC);
 
 echo $log_prefix . "Found " . count($prereminder_rows) . " attestations for pre-reminder.\n";
