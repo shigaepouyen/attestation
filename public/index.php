@@ -208,7 +208,7 @@ $csrf = $_SESSION['csrf'];
 
     <div class="card">
       <h2>Formulaire de dépôt</h2>
-      <form action="upload.php" method="post" enctype="multipart/form-data" novalidate>
+      <form id="upload-form" action="upload.php" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
         <div class="hp"><label>Ne pas remplir</label><input name="website" autocomplete="off"></div>
 
@@ -234,9 +234,51 @@ $csrf = $_SESSION['csrf'];
         </div>
         
         <p class="hint">Le fichier sera stocké de manière sécurisée et supprimé automatiquement après 6 mois.</p>
-        <button type="submit">Envoyer mon attestation</button>
+        <button id="submit-btn" type="submit">Envoyer mon attestation</button>
       </form>
     </div>
   </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('upload-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const fileInput = document.getElementById('pdf');
+
+  form.addEventListener('submit', function (e) {
+    // 1. Validation du fichier
+    const file = fileInput.files[0];
+    if (!file) {
+      alert('Veuillez sélectionner un fichier PDF.');
+      e.preventDefault(); // Empêche l'envoi
+      return;
+    }
+    if (file.type !== 'application/pdf') {
+      alert('Le fichier sélectionné n\'est pas un PDF valide.');
+      e.preventDefault(); // Empêche l'envoi
+      return;
+    }
+
+    // 2. Empêcher les soumissions multiples
+    if (submitBtn.disabled) {
+        e.preventDefault();
+        return;
+    }
+
+    // Désactiver le bouton et afficher un message de chargement
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Envoi en cours...';
+
+    // Pour la robustesse, réactiver le bouton après un court délai
+    // au cas où la soumission serait annulée par le navigateur (ex: navigation arrière)
+    setTimeout(() => {
+        if (submitBtn.disabled) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Envoyer mon attestation';
+        }
+    }, 5000); // 5 secondes
+  });
+});
+</script>
 </body>
 </html>

@@ -146,6 +146,18 @@ $nom_raw    = trim($_POST['nom'] ?? '');
 $prenom_raw = trim($_POST['prenom'] ?? '');
 $email_raw  = trim($_POST['email'] ?? '');
 
+// --- Contrôles de longueur ---
+if (mb_strlen($nom_raw) > 100 || mb_strlen($prenom_raw) > 100 || mb_strlen($email_raw) > 255) {
+    fail('Les données fournies sont trop longues.');
+}
+
+// --- Validation du format des noms ---
+// Autorise les lettres (Unicode), apostrophes, tirets et espaces.
+if (!preg_match('/^[\p{L}\' -]+$/u', $nom_raw) || !preg_match('/^[\p{L}\' -]+$/u', $prenom_raw)) {
+    fail('Le nom ou le prénom contient des caractères non autorisés.');
+}
+
+// --- Validation de l'e-mail ---
 $parent_email = filter_var($email_raw, FILTER_VALIDATE_EMAIL);
 
 write_log($uploadLog, "[" . date('c') . "] Tentative d'upload par " . ($parent_email ?: 'NO_EMAIL') . " (nom={$nom_raw}, prenom={$prenom_raw}) IP=" . ($_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN'));
@@ -157,7 +169,7 @@ if (!$parent_email) {
     fail('Une adresse e-mail valide est obligatoire.');
 }
 
-// Nettoyage simple pour la base de données
+// Nettoyage pour la base de données après validation
 $nom = htmlspecialchars($nom_raw, ENT_QUOTES, 'UTF-8');
 $prenom = htmlspecialchars($prenom_raw, ENT_QUOTES, 'UTF-8');
 
