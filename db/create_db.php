@@ -14,6 +14,7 @@ CREATE TABLE attestations (
   filename TEXT NOT NULL,
   token TEXT NOT NULL UNIQUE,
   uploaded_at INTEGER NOT NULL,
+  validity_date INTEGER NOT NULL,
   expiry_at INTEGER NOT NULL,
   reminder_sent INTEGER DEFAULT 0,
   deleted_at INTEGER DEFAULT NULL

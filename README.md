@@ -1,287 +1,144 @@
 # 🧾 Système de gestion des attestations d'honorabilité
 
-Collecter, suivre et gérer automatiquement les attestations d’honorabilité des parents intervenants, avec un portail de consultation sécurisé pour la direction.
+Une application PHP simple et robuste pour collecter, suivre et gérer les attestations d’honorabilité des intervenants. Elle inclut des rappels automatiques, un portail de gestion pour les administrateurs et un accès sécurisé pour la direction.
 
 ---
 
-## 🎯 Objectif
+## 🎯 Fonctionnalités
 
-Le système assure :
-- **Dépôt de fichiers** simple et sécurisé via un formulaire public.
-- **Portail web sécurisé** pour la direction listant toutes les attestations valides.
-- **Téléchargement en un clic** d’une **archive ZIP** de tous les documents valides.
-- **Notification par e‑mail** à la direction uniquement si de **nouvelles** attestations sont déposées.
-- **Suppression automatique** des fichiers et des données **après 6 mois**.
-- **Relance automatique** par e‑mail **avant l’expiration**.
-- **Tableau de bord administratif** pour le suivi global.
+*   **Portail de Dépôt Public** : Un formulaire simple et sécurisé pour que les intervenants puissent téléverser leur attestation au format PDF.
+*   **Date de Validité** : Le formulaire permet de spécifier la date de validité de l'attestation, qui est utilisée comme référence pour le calcul de la date d'expiration.
+*   **Tableau de Bord Administrateur** : Une interface sécurisée pour les administrateurs avec des statistiques, une liste filtrable des attestations et des actions manuelles (rappel, suppression).
+*   **Rappels Automatiques** : Un script cron envoie des rappels par e-mail aux intervenants avant l'expiration de leur attestation.
+*   **Purge Automatique** : Les attestations expirées sont automatiquement marquées comme supprimées et les fichiers associés sont effacés.
+*   **Portail pour la Direction** : Un lien sécurisé, envoyé par e-mail, permet à la direction de consulter la liste des attestations actives et de télécharger une archive ZIP.
+*   **Journalisation** : Les actions importantes (uploads, erreurs) sont journalisées pour l'audit.
 
 ---
 
 ## 📁 Structure du projet
 
 ```
-attestation/
-│
-├── config.php                  → Configuration principale (chemins, SMTP, admin)
-│
+.
+├── config_exemple.php      # Fichier d'exemple de configuration
+├── config.php              # Fichier de configuration (à créer)
+├── composer.json           # Dépendances du projet
 ├── db/
-│   ├── create_db.php           → Script de création de la base SQLite
-│   └── attestations.sqlite     → Base de données (générée)
-│
-├── storage/
-│   ├── uploads/                → Stockage sécurisé des PDF (hors webroot)
-│   ├── logs/                   → Journaux d'activité (CSV et logs)
-│   └── master_token.txt        → Token temporaire pour le rapport de la direction
-│
+│   ├── create_db.php       # Script pour créer la base de données SQLite
+│   └── attestations.sqlite # Fichier de la base de données (généré)
 ├── cron/
-│   ├── reminders.php           → Cron quotidien : relances + purge expirations
-│   └── weekly_digest.php       → Cron hebdo : envoi lien de rapport à la direction
-│
+│   ├── reminders.php       # Tâche cron pour les rappels et la purge
+│   ├── weekly_digest.php   # Tâche cron pour le rapport hebdomadaire à la direction
+│   └── purge.php           # Tâche cron pour la suppression définitive des données
 ├── lib/
-│   ├── PHPMailer/              → Librairie d’e-mails
-│   └── sendmail.php            → Wrapper pour PHPMailer
-│
+│   └── sendmail.php        # Utilitaire pour l'envoi d'e-mails (via PHPMailer)
 ├── public/
-│   ├── index.php               → Formulaire de dépôt public
-│   ├── upload.php              → Traitement de l’envoi
-│   ├── download.php            → Téléchargement sécurisé d’un fichier
-│   ├── admin.php               → Tableau de bord admin
-│   ├── rapport.php             → **NOUVEAU** Portail direction (liste + téléchargements)
-│   └── archive.php             → **NOUVEAU** Génération ZIP à la volée
-│
-└── tools/                      → Outils CLI (optionnel)
-    ├── make_admin_pass.php     → Générateur de hash du mot de passe admin
-    └── create_db_web.php       → Variante Web temporaire de création BDD
+│   ├── index.php           # Formulaire de dépôt public
+│   ├── upload.php          # Script de traitement du téléversement
+│   ├── admin.php           # Tableau de bord administrateur
+│   ├── admin_actions.php   # Script de traitement des actions admin
+│   ├── rapport.php         # Portail de consultation pour la direction
+│   ├── archive.php         # Génération de l'archive ZIP pour la direction
+│   └── download.php        # Script de téléchargement sécurisé des fichiers
+├── storage/
+│   ├── uploads/            # Stockage des fichiers PDF (hors webroot)
+│   ├── logs/               # Fichiers de log
+│   └── master_token.txt    # Jeton d'accès temporaire pour le rapport de la direction
+└── tools/
+    └── make_admin_pass.php # Outil pour générer le hachage du mot de passe admin
 ```
-
-> Notes
-> - Les répertoires `db/`, `storage/`, `storage/uploads/`, `storage/logs/` doivent être **inscriptibles** par le serveur web.
-> - `storage/uploads/` doit se trouver **hors webroot** si possible. Si ce n’est pas le cas, protéger par règles serveur (deny all) et accès via proxy PHP uniquement.
 
 ---
 
 ## ⚙️ Prérequis
 
-- **PHP 8.1+**
-- Extensions PHP : `pdo_sqlite`, `fileinfo`, `zip` (classe `ZipArchive`).
-- Accès **SSH** ou **FTP** pour l’installation.
-- Un compte e‑mail (ex : Google Workspace) avec **mot de passe d’application**.
-- Serveur web configuré pour exécuter PHP (Apache, Nginx, etc.).
+*   PHP 8.1+
+*   Extensions PHP : `pdo_sqlite`, `fileinfo`, `mbstring`, `zip`.
+*   Composer pour installer les dépendances.
+*   Un serveur web (Apache, Nginx, etc.).
+*   Un compte e-mail pour l'envoi des notifications (compatible SMTP).
 
 ---
 
 ## 🚀 Installation
 
-### 1) Créer la base de données SQLite
+1.  **Cloner le projet** ou téléverser les fichiers sur votre serveur.
 
-**Via SSH (recommandé)** :
-```bash
-cd db
-/usr/local/php8.2/bin/php create_db.php
+2.  **Installer les dépendances** avec Composer :
+    ```bash
+    composer install
+    ```
+
+3.  **Configurer le projet** :
+    *   Copiez `config_exemple.php` vers `config.php`.
+    *   Modifiez `config.php` pour définir les chemins (`storage_dir`, `db_file`, etc.), l'URL de base (`site_base_url`), et les paramètres SMTP pour l'envoi d'e-mails.
+
+4.  **Créer la base de données** :
+    *   Assurez-vous que le répertoire `db/` est inscriptible par le serveur web.
+    *   Exécutez le script de création en ligne de commande :
+        ```bash
+        # Assurez-vous que l'utilisateur www-data (ou l'utilisateur de votre serveur web) a les droits
+        sudo -u www-data php db/create_db.php
+        ```
+
+5.  **Créer un compte administrateur** :
+    *   Générez un hachage de mot de passe :
+        ```bash
+        php tools/make_admin_pass.php
+        ```
+    *   Copiez le hachage généré et collez-le dans `config.php` à la clé `admin.pass_hash`. Définissez également un nom d'utilisateur.
+
+6.  **Configurer les permissions** :
+    *   Le serveur web (généralement `www-data`) doit avoir les droits d'écriture sur les répertoires `storage/` et `db/`.
+        ```bash
+        sudo chown -R www-data:www-data storage db
+        sudo chmod -R 775 storage db
+        ```
+
+7.  **Configurer les tâches CRON** :
+    *   Ajoutez les tâches suivantes à votre crontab (`crontab -e`) pour automatiser les rappels et les rapports. Adaptez le chemin vers PHP et les scripts.
+
+    ```cron
+    # Rappels d'expiration et suppression logique des attestations expirées (tous les jours à 2h)
+    0 2 * * * /usr/bin/php /path/to/your/project/cron/reminders.php
+
+    # Rapport hebdomadaire pour la direction (tous les lundis à 8h)
+    0 8 * * 1 /usr/bin/php /path/to/your/project/cron/weekly_digest.php
+
+    # Purge définitive des attestations marquées comme supprimées (tous les jours à 3h)
+    0 3 * * * /usr/bin/php /path/to/your/project/cron/purge.php
+    ```
+
+---
+
+## 🗃️ Modèle de Données (SQLite)
+
+La base de données contient une table `attestations` avec la structure suivante :
+
+```sql
+CREATE TABLE attestations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nom TEXT NOT NULL,
+  prenom TEXT NOT NULL,
+  parent_email TEXT NOT NULL UNIQUE,
+  filename TEXT NOT NULL,
+  token TEXT NOT NULL UNIQUE,
+  uploaded_at INTEGER NOT NULL,
+  validity_date INTEGER NOT NULL, -- Date de validité spécifiée lors de l'upload
+  expiry_at INTEGER NOT NULL,     -- Calculée à partir de validity_date + 6 mois
+  reminder_sent INTEGER DEFAULT 0,
+  deleted_at INTEGER DEFAULT NULL -- Timestamp de suppression (soft delete)
+);
 ```
-
-**Alternative Web (temporaire)** : exposer `tools/create_db_web.php` le temps de l’initialisation, puis **supprimer** le fichier.
-
----
-
-### 2) Générer le mot de passe administrateur
-
-```bash
-cd tools
-/usr/local/php8.2/bin/php make_admin_pass.php
-```
-Copiez le **hash généré** et collez‑le dans `config.php` > `admin.pass_hash`.
-
----
-
-### 3) Configurer `config.php`
-
-Copier `config_exemple.php` vers `config.php`, puis ajuster :
-- `site_base_url`
-- `director_email`
-- Bloc `smtp` : hôte, port, utilisateur, mot de passe d’application, sécurité
-- `admin.pass_hash` (hash généré à l’étape 2)
-- Chemins absolus vers `storage/` et sous‑dossiers
-
-> Bonnes pratiques : prévoir des **variables d’environnement** (ex : via `.env` chargé par `config.php`) pour les secrets SMTP.
-
----
-
-## ⏰ Tâches automatisées (CRON)
-
-### 1️⃣ Relances quotidiennes + purge
-- **Rôle** : envoie les e‑mails de **rappel** avant expiration et **supprime** les attestations expirées.
-- **Commande** :
-```bash
-/usr/local/php8.2/bin/php /path/to/attestation/cron/reminders.php
-```
-- **Fréquence** : tous les jours, ex : `15 0 * * *`.
-
-### 2️⃣ Rapport hebdomadaire à la direction
-- **Rôle** : envoie un e‑mail **uniquement** s’il y a eu **de nouveaux dépôts** depuis le dernier rapport, avec un **lien sécurisé** à usage unique vers `public/rapport.php`.
-- **Commande** :
-```bash
-/usr/local/php8.2/bin/php /path/to/attestation/cron/weekly_digest.php
-```
-- **Fréquence** : chaque lundi à 08:00, ex : `0 8 * * 1`.
-
----
-
-## 🔐 Interfaces de gestion
-
-### 1. Portail de la Direction
-- **Accès** : via lien sécurisé à **usage unique** envoyé par e‑mail hebdomadaire si activité.
-- **Fonctionnalités** :
-  - Liste des attestations **valides** : Nom, Prénom, Date d’expiration.
-  - **Téléchargement individuel** sécurisé.
-  - **Téléchargement ZIP** de toutes les attestations valides.
-
-### 2. Tableau de bord Administrateur
-- **URL** : `https://VOTRE-DOMAINE.FR/attestation/public/admin.php`
-- **Fonctionnalités** :
-  - Vue globale + statistiques (total, actives, expirées).
-  - Liste filtrable/paginée de toutes les attestations, y compris expirées/supprimées.
-  - **Aucun lien de téléchargement** n’est affiché en admin pour des raisons de sécurité.
-
----
-
-## 🔄 Fonctionnement du système
-
-| Étape         | Déclencheur                  | Résultat                                                                 |
-|---------------|------------------------------|--------------------------------------------------------------------------|
-| Dépôt         | Parent via formulaire        | PDF sauvegardé, enregistrement BDD, log CSV                              |
-| Remplacement  | Dépôt avec e‑mail existant   | Ancien fichier supprimé, nouveau pris en compte                          |
-| Rapport hebdo | `weekly_digest.php`          | S’il y a du nouveau : e‑mail direction + lien sécurisé vers `rapport.php` |
-| Consultation  | Lien reçu par la direction   | Accès à la liste et téléchargements                                      |
-| Expiration    | `reminders.php`              | E‑mail de relance au parent, **suppression** du fichier expiré           |
-| Suivi admin   | `admin.php`                  | Stats + historique                                                       |
 
 ---
 
 ## 🛡️ Sécurité
 
-- Les PDF sont stockés **hors webroot**. L’accès se fait par **proxy PHP** via `download.php` avec **tokens uniques** et durée de vie limitée.
-- Le **portail direction** est protégé par un **master token** temporaire stocké dans `storage/master_token.txt`. Les liens envoyés expirent automatiquement.
-- L’**admin** est protégé par **mot de passe** (hash Argon2ID ou bcrypt) et verrouillage progressif des tentatives.
-- Les fichiers **expirés** sont purgés physiquement du serveur et leurs traces sont anonymisées dans les logs si requis.
-- Les en‑têtes `Content-Disposition` et `X-Content-Type-Options: nosniff` sont forcés pour les téléchargements.
-- Les uploads sont validés : **MIME type** via `finfo`, taille max, **scan simple** PDF, nom normalisé, dossier par **UUID**.
-- **CSRF**: jetons sur les formulaires, cookies `SameSite=Lax`, désérialisation interdite.
-- **Rate‑limit** basique côté dépôt public. Captcha optionnel.
-
----
-
-## 🗃️ Modèle de données (SQLite)
-
-Table `attestations` (exemple minimal) :
-```sql
-CREATE TABLE IF NOT EXISTS attestations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  parent_email TEXT NOT NULL,
-  parent_firstname TEXT NOT NULL,
-  parent_lastname TEXT NOT NULL,
-  file_path TEXT NOT NULL,
-  uploaded_at DATETIME NOT NULL,
-  expires_at DATETIME NOT NULL,
-  last_digest_at DATETIME,
-  checksum TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'active' -- active | expired | deleted
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_attestations_email ON attestations(parent_email);
-CREATE INDEX IF NOT EXISTS idx_attestations_expires ON attestations(expires_at);
-```
----
-
-## 🔧 Configuration – exemple
-
-```php
-<?php
-return [
-  'site_base_url' => 'https://VOTRE-DOMAINE.FR/attestation/public',
-  'paths' => [
-    'storage' => '/var/www/attestation/storage',
-    'uploads' => '/var/www/attestation/storage/uploads',
-    'logs'    => '/var/www/attestation/storage/logs',
-    'db'      => '/var/www/attestation/db/attestations.sqlite',
-  ],
-  'smtp' => [
-    'host' => 'smtp.example.com',
-    'port' => 587,
-    'user' => 'notifier@example.com',
-    'pass' => 'MOTDEPASSE_APPLICATION',
-    'secure' => 'tls',
-    'from' => ['address' => 'notifier@example.com', 'name' => 'Attestations Bot'],
-  ],
-  'director_email' => 'direction@example.com',
-  'admin' => [
-    'pass_hash' => 'COLLER_LE_HASH_ICI',
-    'session_name' => 'attestation_admin',
-  ],
-  'security' => [
-    'token_ttl_minutes' => 30,
-    'digest_lookback_days' => 7
-  ],
-  'retention_months' => 6
-];
-```
----
-
-## ✉️ Flux e‑mail
-
-- **Parents** : accusé de réception optionnel, relance avant expiration.
-- **Direction** : e‑mail **uniquement si** nouveautés la semaine écoulée, avec **lien sécurisé**.
-- **Expéditeur** : utiliser une adresse dédiée (éviter « no‑reply » pour la délivrabilité).
-
----
-
-## 🧰 Dépannage rapide
-
-- **ZIP vide** : vérifier droits sur `storage/uploads/` et statuts `active` en BDD.
-- **Mails non reçus** : vérifier SMTP, SPF/DKIM/DMARC, ports sortants, file d’attente CRON.
-- **Token invalide** : TTL trop court, horloge serveur, cache reverse‑proxy.
-- **Upload refusé** : MIME/type non PDF, taille trop grande, fichier corrompu.
-
----
-
-## 🔁 Sauvegarde et restauration
-
-- **Sauvegarder** : `db/attestations.sqlite` et `storage/uploads/`.
-- **Restaurer** : remettre les répertoires, puis exécuter `create_db.php` si schéma absent.
-- Les tokens et journaux peuvent être régénérés au besoin.
-
----
-
-## 🧪 Tests rapides (manuels)
-
-1. Déposer 2 PDF avec le **même e‑mail** : vérifier le **remplacement** et checksum.
-2. Forcer une **expiration** courte en BDD et lancer `reminders.php` : purge + e‑mail.
-3. Créer 1 nouvel enregistrement et lancer `weekly_digest.php` : e‑mail direction avec lien.
-4. Ouvrir le **lien** : voir la liste valide + **ZIP** fonctionnel.
-
----
-
-## 🔭 Roadmap courte
-
-- Double stockage optionnel chiffré (libsodium).
-- SSO pour l’admin (OIDC).
-- Webhooks d’audit vers SI interne.
-- Captcha adaptatif côté dépôt.
-
----
-
-## ✅ Check‑list d’exploitation
-
-- [ ] `config.php` correctement rempli
-- [ ] CRONs actifs et logués
-- [ ] Répertoires inscriptibles
-- [ ] SPF/DKIM/DMARC OK
-- [ ] Accès admin protégé et testé
-- [ ] Portail direction testé avec lien temps‑réel
-- [ ] Sauvegardes programmées
-
----
-
-## 📜 Licence
-
-Projet interne. À adapter selon la politique de votre organisation.
+*   **Stockage des fichiers** : Les fichiers PDF sont stockés en dehors du répertoire web public (`public/`) pour empêcher l'accès direct. Ils sont servis via un script PHP (`download.php`) qui vérifie les permissions.
+*   **Noms de fichiers** : Les noms de fichiers originaux sont remplacés par des UUIDs pour éviter les conflits et les injections.
+*   **Authentification** : L'accès au panneau d'administration est protégé par un nom d'utilisateur et un mot de passe haché (Argon2ID).
+*   **Protection CSRF** : Des jetons CSRF sont utilisés sur tous les formulaires pour se prémunir contre les attaques de type Cross-Site Request Forgery.
+*   **Honeypot** : Un champ caché est présent dans le formulaire de dépôt pour tromper les bots spammeurs.
+*   **Validation des données** : Toutes les données entrantes (champs de formulaire, fichiers) sont rigoureusement validées côté serveur.
+*   **Soft Delete** : Les attestations ne sont pas immédiatement supprimées de la base de données, mais marquées avec un `deleted_at`, permettant une éventuelle récupération et assurant l'intégrité des logs.

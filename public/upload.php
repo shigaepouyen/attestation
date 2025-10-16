@@ -145,6 +145,7 @@ if (!empty($_POST['website'])) {
 $nom_raw    = trim($_POST['nom'] ?? '');
 $prenom_raw = trim($_POST['prenom'] ?? '');
 $email_raw  = trim($_POST['email'] ?? '');
+$validity_date_raw = trim($_POST['validity_date'] ?? '');
 
 // --- Contrôles de longueur ---
 if (mb_strlen($nom_raw) > 100 || mb_strlen($prenom_raw) > 100 || mb_strlen($email_raw) > 255) {
@@ -168,6 +169,13 @@ if (empty($nom_raw) || empty($prenom_raw)) {
 if (!$parent_email) {
     fail('Une adresse e-mail valide est obligatoire.');
 }
+
+// --- Validation de la date de validité ---
+$validity_dt = DateTime::createFromFormat('Y-m-d', $validity_date_raw);
+if (!$validity_dt || $validity_dt->format('Y-m-d') !== $validity_date_raw) {
+    fail('La date de validité fournie est invalide.');
+}
+$validity_timestamp = $validity_dt->getTimestamp();
 
 // Nettoyage pour la base de données après validation
 $nom = htmlspecialchars($nom_raw, ENT_QUOTES, 'UTF-8');
@@ -226,7 +234,7 @@ try {
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     $now = time();
-    $expiry = strtotime('+6 months', $now);
+    $expiry = strtotime('+6 months', $validity_timestamp);
     $token = bin2hex(random_bytes(24));
 
     $db->beginTransaction();
@@ -240,12 +248,12 @@ try {
             $oldPath = $storageDir . '/' . $existing['filename'];
             if (file_exists($oldPath)) @unlink($oldPath);
         }
-        $upd = $db->prepare('UPDATE attestations SET nom=?, prenom=?, filename=?, token=?, uploaded_at=?, expiry_at=?, reminder_sent=0, deleted_at=NULL WHERE id=?');
-        $upd->execute([$nom, $prenom, basename($destPath), $token, $now, $expiry, $existing['id']]);
+        $upd = $db->prepare('UPDATE attestations SET nom=?, prenom=?, filename=?, token=?, uploaded_at=?, validity_date=?, expiry_at=?, reminder_sent=0, deleted_at=NULL WHERE id=?');
+        $upd->execute([$nom, $prenom, basename($destPath), $token, $now, $validity_timestamp, $expiry, $existing['id']]);
         $recordId = $existing['id'];
     } else {
-        $ins = $db->prepare('INSERT INTO attestations (nom,prenom,parent_email,filename,token,uploaded_at,expiry_at) VALUES (?,?,?,?,?,?,?)');
-        $ins->execute([$nom, $prenom, $parent_email, basename($destPath), $token, $now, $expiry]);
+        $ins = $db->prepare('INSERT INTO attestations (nom,prenom,parent_email,filename,token,uploaded_at,validity_date,expiry_at) VALUES (?,?,?,?,?,?,?,?)');
+        $ins->execute([$nom, $prenom, $parent_email, basename($destPath), $token, $now, $validity_timestamp, $expiry]);
         $recordId = $db->lastInsertId();
     }
     $db->commit();
@@ -394,6 +402,7 @@ if (!sendMail($parent_email, $subject, $body, $config)) {
     <div class="details">
       <p><strong>Nom du fichier :</strong> <?= htmlspecialchars(basename($destPath), ENT_QUOTES, 'UTF-8') ?></p>
       <p><strong>Déposé le :</strong> <?= date('d/m/Y à H:i', $now) ?></p>
+      <p><strong>Date de validité :</strong> <?= date('d/m/Y', $validity_timestamp) ?></p>
       <p><strong>Valide jusqu’au :</strong> <?= date('d/m/Y', $expiry) ?> (6 mois)</p>
       <p style="margin-top: 1rem; font-size: 0.9rem; color: #6c757d;">Ce document remplace toute attestation précédemment fournie. Si cette attestation n'est pas renouvelée, elle sera conservée pendant <?= htmlspecialchars($retention_text, ENT_QUOTES, 'UTF-8') ?> après sa date d'expiration avant d'être définitivement supprimée de nos systèmes.</p>
     </div>

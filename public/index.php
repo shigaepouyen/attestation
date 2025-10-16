@@ -227,6 +227,12 @@ $csrf = $_SESSION['csrf'];
             <label for="email">Votre e-mail (obligatoire)</label>
             <input id="email" name="email" type="email" required placeholder="sophie.durand@email.fr" autocomplete="email">
         </div>
+
+        <div style="margin-top: 1.5rem;">
+            <label for="validity_date">Date de validité de l'attestation</label>
+            <input id="validity_date" name="validity_date" type="date" value="<?= date('Y-m-d') ?>" required>
+            <p class="hint" style="text-align: left; margin-top: 0.25rem;">Cette date est indiquée sur le document PDF que vous avez reçu.</p>
+        </div>
         
         <div style="margin-top: 1.5rem;">
             <label for="pdf">Votre attestation (Fichier PDF uniquement)</label>
