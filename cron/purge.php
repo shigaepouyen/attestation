@@ -5,9 +5,32 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $config = require __DIR__ . '/../config.php';
+
+// Configuration et création du répertoire de logs
+$log_dir = $config['log_dir'] ?? __DIR__ . '/../storage/logs';
+if (!is_dir($log_dir)) {
+    // Tente de créer le répertoire, supprime le umask pour un contrôle total des permissions
+    $old_umask = umask(0);
+    mkdir($log_dir, 0755, true);
+    umask($old_umask);
+}
+
+$log_file = $log_dir . '/purge.log';
+// Fonction de logging
+function log_message($message)
+{
+    global $log_file;
+    // Ajoute un timestamp et le message au fichier de log
+    file_put_contents($log_file, date('Y-m-d H:i:s') . ' - ' . $message . "\n", FILE_APPEND);
+    // Affiche aussi le message dans la console pour la compatibilité
+    echo $message . "\n";
+}
+
+log_message("--- Début du script de purge ---");
+
 $dbfile = $config['db_file'];
 if (!file_exists($dbfile)) {
-    echo "Erreur: Fichier de base de données introuvable.\n";
+    log_message("Erreur: Fichier de base de données introuvable.");
     exit(1);
 }
 $db = new PDO('sqlite:' . $dbfile);
@@ -15,7 +38,7 @@ $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $retention_days = $config['purge_deleted_after_days'] ?? 365;
 if ($retention_days <= 0) {
-    echo "La purge est désactivée (purge_deleted_after_days <= 0).\n";
+    log_message("La purge est désactivée (purge_deleted_after_days <= 0).");
     exit(0);
 }
 
@@ -27,11 +50,11 @@ $stmt->execute([$purge_before_timestamp]);
 $attestations_to_purge = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($attestations_to_purge)) {
-    echo "Aucune attestation à purger.\n";
+    log_message("Aucune attestation à purger.");
     exit(0);
 }
 
-echo "Début de la purge de " . count($attestations_to_purge) . " attestation(s)...\n";
+log_message("Début de la purge de " . count($attestations_to_purge) . " attestation(s)...");
 
 $purged_count = 0;
 $error_count = 0;
@@ -43,12 +66,12 @@ foreach ($attestations_to_purge as $attestation) {
         $filepath = $config['storage_dir'] . '/' . $attestation['filename'];
         if (file_exists($filepath)) {
             if (unlink($filepath)) {
-                echo "Fichier " . $attestation['filename'] . " supprimé.\n";
+                log_message("Fichier " . $attestation['filename'] . " supprimé.");
             } else {
                 throw new Exception("Impossible de supprimer le fichier " . $attestation['filename']);
             }
         } else {
-            echo "Fichier " . $attestation['filename'] . " non trouvé, suppression de l'entrée DB uniquement.\n";
+            log_message("Fichier " . $attestation['filename'] . " non trouvé, suppression de l'entrée DB uniquement.");
         }
 
         // 2. Supprimer l'enregistrement de la base de données
@@ -57,17 +80,18 @@ foreach ($attestations_to_purge as $attestation) {
 
         $db->commit();
         $purged_count++;
-        echo "Enregistrement ID " . $attestation['id'] . " purgé de la base de données.\n";
+        log_message("Enregistrement ID " . $attestation['id'] . " purgé de la base de données.");
 
     } catch (Exception $e) {
         $db->rollBack();
-        echo "Erreur lors de la purge de l'attestation ID " . $attestation['id'] . ": " . $e->getMessage() . "\n";
+        log_message("Erreur lors de la purge de l'attestation ID " . $attestation['id'] . ": " . $e->getMessage());
         $error_count++;
     }
 }
 
-echo "Purge terminée.\n";
-echo "Total purgé: " . $purged_count . "\n";
-echo "Erreurs: " . $error_count . "\n";
+log_message("Purge terminée.");
+log_message("Total purgé: " . $purged_count);
+log_message("Erreurs: " . $error_count);
+log_message("--- Fin du script de purge ---");
 
 exit(0);
