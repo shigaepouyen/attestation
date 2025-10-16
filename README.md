@@ -7,7 +7,7 @@ Une application PHP simple et robuste pour collecter, suivre et gérer les attes
 ## 🎯 Fonctionnalités
 
 *   **Portail de Dépôt Public** : Un formulaire simple et sécurisé pour que les intervenants puissent téléverser leur attestation au format PDF.
-*   **Date de Validité** : Le formulaire permet de spécifier la date de validité de l'attestation, qui est utilisée comme référence pour le calcul de la date d'expiration.
+*   **Date de Fin de Validité** : Le formulaire propose une date de fin de validité par défaut (6 mois à partir du jour même), que l'utilisateur peut ajuster si nécessaire.
 *   **Tableau de Bord Administrateur** : Une interface sécurisée pour les administrateurs avec des statistiques, une liste filtrable des attestations et des actions manuelles (rappel, suppression).
 *   **Rappels Automatiques** : Un script cron envoie des rappels par e-mail aux intervenants avant l'expiration de leur attestation.
 *   **Purge Automatique** : Les attestations expirées sont automatiquement marquées comme supprimées et les fichiers associés sont effacés.
@@ -22,7 +22,6 @@ Une application PHP simple et robuste pour collecter, suivre et gérer les attes
 .
 ├── config_exemple.php      # Fichier d'exemple de configuration
 ├── config.php              # Fichier de configuration (à créer)
-├── composer.json           # Dépendances du projet
 ├── db/
 │   ├── create_db.php       # Script pour créer la base de données SQLite
 │   └── attestations.sqlite # Fichier de la base de données (généré)
@@ -54,7 +53,6 @@ Une application PHP simple et robuste pour collecter, suivre et gérer les attes
 
 *   PHP 8.1+
 *   Extensions PHP : `pdo_sqlite`, `fileinfo`, `mbstring`, `zip`.
-*   Composer pour installer les dépendances.
 *   Un serveur web (Apache, Nginx, etc.).
 *   Un compte e-mail pour l'envoi des notifications (compatible SMTP).
 
@@ -62,18 +60,13 @@ Une application PHP simple et robuste pour collecter, suivre et gérer les attes
 
 ## 🚀 Installation
 
-1.  **Cloner le projet** ou téléverser les fichiers sur votre serveur.
+1.  **Téléverser les fichiers** sur votre serveur.
 
-2.  **Installer les dépendances** avec Composer :
-    ```bash
-    composer install
-    ```
-
-3.  **Configurer le projet** :
+2.  **Configurer le projet** :
     *   Copiez `config_exemple.php` vers `config.php`.
     *   Modifiez `config.php` pour définir les chemins (`storage_dir`, `db_file`, etc.), l'URL de base (`site_base_url`), et les paramètres SMTP pour l'envoi d'e-mails.
 
-4.  **Créer la base de données** :
+3.  **Créer la base de données** :
     *   Assurez-vous que le répertoire `db/` est inscriptible par le serveur web.
     *   Exécutez le script de création en ligne de commande :
         ```bash
@@ -81,21 +74,21 @@ Une application PHP simple et robuste pour collecter, suivre et gérer les attes
         sudo -u www-data php db/create_db.php
         ```
 
-5.  **Créer un compte administrateur** :
+4.  **Créer un compte administrateur** :
     *   Générez un hachage de mot de passe :
         ```bash
         php tools/make_admin_pass.php
         ```
     *   Copiez le hachage généré et collez-le dans `config.php` à la clé `admin.pass_hash`. Définissez également un nom d'utilisateur.
 
-6.  **Configurer les permissions** :
+5.  **Configurer les permissions** :
     *   Le serveur web (généralement `www-data`) doit avoir les droits d'écriture sur les répertoires `storage/` et `db/`.
         ```bash
         sudo chown -R www-data:www-data storage db
         sudo chmod -R 775 storage db
         ```
 
-7.  **Configurer les tâches CRON** :
+6.  **Configurer les tâches CRON** :
     *   Ajoutez les tâches suivantes à votre crontab (`crontab -e`) pour automatiser les rappels et les rapports. Adaptez le chemin vers PHP et les scripts.
 
     ```cron
@@ -124,8 +117,7 @@ CREATE TABLE attestations (
   filename TEXT NOT NULL,
   token TEXT NOT NULL UNIQUE,
   uploaded_at INTEGER NOT NULL,
-  validity_date INTEGER NOT NULL, -- Date de validité spécifiée lors de l'upload
-  expiry_at INTEGER NOT NULL,     -- Calculée à partir de validity_date + 6 mois
+  expiry_at INTEGER NOT NULL,     -- Date de fin de validité, fournie par l'utilisateur
   reminder_sent INTEGER DEFAULT 0,
   deleted_at INTEGER DEFAULT NULL -- Timestamp de suppression (soft delete)
 );

@@ -229,9 +229,9 @@ $csrf = $_SESSION['csrf'];
         </div>
 
         <div style="margin-top: 1.5rem;">
-            <label for="validity_date">Date de validité de l'attestation</label>
-            <input id="validity_date" name="validity_date" type="date" value="<?= date('Y-m-d') ?>" required>
-            <p class="hint" style="text-align: left; margin-top: 0.25rem;">Cette date est indiquée sur le document PDF que vous avez reçu.</p>
+            <label for="expiry_at">Date de fin de validité</label>
+            <input id="expiry_at" name="expiry_at" type="date" value="<?= date('Y-m-d', strtotime('+6 months')) ?>" required>
+            <p class="hint" style="text-align: left; margin-top: 0.25rem;">La date de fin de validité se trouve sur votre attestation. La date ci-dessus est une suggestion.</p>
         </div>
         
         <div style="margin-top: 1.5rem;">

@@ -231,11 +231,11 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="table-container">
       <table>
         <thead>
-          <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Déposé le</th><th>Date validité</th><th>Expire le</th><th>État</th><th>Relance</th><th>Actions</th></tr>
+          <tr><th>Nom</th><th>Prénom</th><th>Email</th><th>Déposé le</th><th>Expire le</th><th>État</th><th>Relance</th><th>Actions</th></tr>
         </thead>
         <tbody>
           <?php if (!$rows): ?>
-            <tr><td colspan="9" style="text-align:center; padding: 2rem; color: var(--secondary);">Aucun résultat pour cette recherche.</td></tr>
+            <tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--secondary);">Aucun résultat pour cette recherche.</td></tr>
           <?php else:
             foreach($rows as $r):
               $e = etat($r, $now);
@@ -246,7 +246,6 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
               <td><?=h($r['prenom'])?></td>
               <td><?=h($r['parent_email'])?></td>
               <td><?=h(dt($r['uploaded_at']))?></td>
-              <td><?=h(dt($r['validity_date']))?></td>
               <td><?=h(dt($r['expiry_at']))?></td>
               <td><span class="pill <?=h($e['class'])?>"><?=h($e['text'])?></span></td>
               <td><?=h($relance_status)?></td>
