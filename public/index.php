@@ -227,6 +227,12 @@ $csrf = $_SESSION['csrf'];
             <label for="email">Votre e-mail (obligatoire)</label>
             <input id="email" name="email" type="email" required placeholder="sophie.durand@email.fr" autocomplete="email">
         </div>
+
+        <div style="margin-top: 1.5rem;">
+            <label for="expiry_at">Date de fin de validité</label>
+            <input id="expiry_at" name="expiry_at" type="date" value="<?= date('Y-m-d', strtotime('+6 months')) ?>" required>
+            <p class="hint" style="text-align: left; margin-top: 0.25rem;">La date de fin de validité se trouve sur votre attestation. La date ci-dessus est une suggestion.</p>
+        </div>
         
         <div style="margin-top: 1.5rem;">
             <label for="pdf">Votre attestation (Fichier PDF uniquement)</label>

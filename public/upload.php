@@ -145,6 +145,7 @@ if (!empty($_POST['website'])) {
 $nom_raw    = trim($_POST['nom'] ?? '');
 $prenom_raw = trim($_POST['prenom'] ?? '');
 $email_raw  = trim($_POST['email'] ?? '');
+$expiry_at_raw = trim($_POST['expiry_at'] ?? '');
 
 // --- Contrôles de longueur ---
 if (mb_strlen($nom_raw) > 100 || mb_strlen($prenom_raw) > 100 || mb_strlen($email_raw) > 255) {
@@ -168,6 +169,13 @@ if (empty($nom_raw) || empty($prenom_raw)) {
 if (!$parent_email) {
     fail('Une adresse e-mail valide est obligatoire.');
 }
+
+// --- Validation de la date de fin de validité ---
+$expiry_dt = DateTime::createFromFormat('Y-m-d', $expiry_at_raw);
+if (!$expiry_dt || $expiry_dt->format('Y-m-d') !== $expiry_at_raw) {
+    fail('La date de fin de validité fournie est invalide.');
+}
+$expiry = $expiry_dt->getTimestamp();
 
 // Nettoyage pour la base de données après validation
 $nom = htmlspecialchars($nom_raw, ENT_QUOTES, 'UTF-8');
@@ -226,7 +234,6 @@ try {
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     $now = time();
-    $expiry = strtotime('+6 months', $now);
     $token = bin2hex(random_bytes(24));
 
     $db->beginTransaction();

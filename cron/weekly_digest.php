@@ -7,7 +7,8 @@ $config = require __DIR__ . '/../config.php';
 date_default_timezone_set('Europe/Paris');
 
 // 1) Logging minimaliste et sûr
-$logFile = rtrim($config['storage_dir'] ?? (__DIR__ . '/../storage/logs'), '/').'/weekly_digest.log';
+$logDir = dirname($config['csv_path']);
+$logFile = $logDir . '/weekly_digest.log';
 if (!is_dir(dirname($logFile))) {
     @mkdir(dirname($logFile), 0775, true);
 }
