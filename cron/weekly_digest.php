@@ -1,47 +1,92 @@
 <?php
 // cron/weekly_digest.php
-// Envoie un e-mail hebdomadaire à la direction avec un lien sécurisé
-// vers une page web listant toutes les attestations valides.
 
 require __DIR__ . '/../config.php';
 $config = require __DIR__ . '/../config.php';
-$db = new PDO('sqlite:' . $config['db_file']);
-$db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-require_once __DIR__ . '/../lib/sendmail.php';
+date_default_timezone_set('Europe/Paris');
 
-// Étape 1: Vérifier s'il y a eu de nouveaux dépôts cette semaine.
-$since = strtotime('-7 days');
-$checkNewStmt = $db->prepare('SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ? AND deleted_at IS NULL');
-$checkNewStmt->execute([$since]);
-$newSubmissionsCount = (int)$checkNewStmt->fetchColumn();
-
-if ($newSubmissionsCount === 0) {
-    echo "Aucun nouveau depot cette semaine. Aucun e-mail envoye.\n";
-    exit;
+// 1) Logging minimaliste et sûr
+$logFile = rtrim($config['storage_dir'] ?? (__DIR__ . '/../storage/uploads'), '/').'/weekly_digest.log';
+if (!is_dir(dirname($logFile))) {
+    @mkdir(dirname($logFile), 0775, true);
+}
+function logLine(string $line) : void {
+    global $logFile;
+    $ts = date('Y-m-d H:i:s');
+    // FILE_APPEND + LOCK_EX pour éviter les logs qui se marchent dessus
+    @file_put_contents($logFile, "[$ts] $line\n", FILE_APPEND | LOCK_EX);
 }
 
-// Étape 2: Générer un "master token" unique pour l'accès à la page de rapport.
-// On le stocke dans un fichier temporaire pour que la page de rapport puisse le vérifier.
-$masterToken = bin2hex(random_bytes(32));
-// Étape 1: Vérifier s'il y a eu de nouveaux dépôts cette semaine (uniquement les actifs).
-// Le token est valable 2 semaines pour laisser le temps de consulter le rapport.
-$tokenData = json_encode(['token' => $masterToken, 'expiry' => time() + (14 * 24 * 60 * 60)]);
-file_put_contents($tokenFile, $tokenData);
+// 2) Convertir les warnings en exceptions (genre file_put_contents qui échoue)
+set_error_handler(function ($severity, $message, $file, $line) {
+    if (!(error_reporting() & $severity)) return false;
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
 
-// Étape 3: Préparer et envoyer l'e-mail.
-$subject = "[APEL St Jo] Attestation honorabilité - " . date('Y-m-d');
-$reportLink = rtrim($config['site_base_url'], '/') . '/rapport.php?token=' . $masterToken;
-$directorTitle = $config['director_title'] ?? '';
+try {
+    // 3) DB
+    $db = new PDO('sqlite:' . $config['db_file']);
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-$body = "Bonjour " . $directorTitle . ",\n\n";
-$body .= "Il y a eu " . $newSubmissionsCount . " nouveau(x) dépôt(s) d'attestation cette semaine.\n\n";
-$body .= "Vous pouvez consulter la liste complète et à jour de toutes les attestations valides en cliquant sur le lien sécurisé ci-dessous :\n\n";
-$body .= "$reportLink\n\n";
-$body .= "Ce lien est valable 14 jours.\n";
-$body .= "\nCordialement,\nAPEL Saint-Joseph\n";
+    require_once __DIR__ . '/../lib/sendmail.php';
 
-$sent = sendMail($config['director_email'], $subject, $body, $config);
+    // 4) Check nouveaux dépôts
+    $since = strtotime('-7 days');
+    $checkNewStmt = $db->prepare('SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ? AND deleted_at IS NULL');
+    $checkNewStmt->execute([$since]);
+    $newSubmissionsCount = (int)$checkNewStmt->fetchColumn();
 
-echo "E-mail de rapport envoye a {$config['director_email']} (sent=" . ($sent ? 1 : 0) . ").\n";
+    if ($newSubmissionsCount === 0) {
+        logLine("Aucun nouveau dépôt cette semaine. Aucun e-mail envoyé.");
+        // Optionnel: echo pour le mail cron
+        echo "Aucun nouveau dépôt cette semaine. Aucun e-mail envoyé.\n";
+        exit(0);
+    }
 
+    // 5) Master token - sécuriser l’IO
+    $masterToken = bin2hex(random_bytes(32));
+    $tokenPayload = [
+        'token'  => $masterToken,
+        'expiry' => time() + (14 * 24 * 60 * 60), // 14 jours
+    ];
+    // Où écrire ce token ? Définis un fichier dédié en storage si ce n'est pas déjà fait
+    $tokenFile = ($config['token_file'] ?? (rtrim($config['storage_dir'], '/').'/report_token.json'));
+    @file_put_contents($tokenFile, json_encode($tokenPayload, JSON_UNESCAPED_SLASHES), FILE_APPEND | LOCK_EX);
+    // Remarque: si tu veux un seul token actif, enlève FILE_APPEND pour écraser le précédent.
+
+    // 6) Email
+    $subject = "[APEL St Jo] Attestation honorabilité - " . date('Y-m-d');
+    $reportLink = rtrim($config['site_base_url'], '/') . '/rapport.php?token=' . $masterToken;
+    $directorTitle = $config['director_title'] ?? '';
+    $to = $config['director_email'];
+
+    $body = "Bonjour " . $directorTitle . ",\n\n";
+    $body .= "Il y a eu " . $newSubmissionsCount . " nouveau(x) dépôt(s) d'attestation cette semaine.\n\n";
+    $body .= "Consultez la liste complète et à jour des attestations valides via le lien sécurisé :\n\n";
+    $body .= "$reportLink\n\n";
+    $body .= "Ce lien est valable 14 jours.\n\n";
+    $body .= "Cordialement,\nAPEL Saint-Joseph\n";
+
+    $sent = sendMail($to, $subject, $body, $config);
+
+    if (!$sent) {
+        // échec d’envoi: on logue sévèrement et on remonte un code d’erreur
+        logLine("ERREUR: échec d'envoi de l'e-mail à $to. Compte=$newSubmissionsCount");
+        echo "Echec d'envoi de l'e-mail.\n";
+        exit(2);
+    }
+
+    logLine("OK: e-mail envoyé à $to. Compte=$newSubmissionsCount Lien=$reportLink");
+    echo "E-mail envoyé à $to\n";
+    exit(0);
+
+} catch (Throwable $e) {
+    // 7) Gestion des erreurs fatales
+    logLine("FATAL: ".$e->getMessage());
+    // Pour debug cron: on imprime aussi
+    echo "Erreur: ".$e->getMessage()."\n";
+    exit(1);
+} finally {
+    restore_error_handler();
+}
