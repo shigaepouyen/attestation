@@ -44,16 +44,22 @@ try {
         exit(0);
     }
 
-    // 5) Master token - sécuriser l’IO
+    // 5) Générer et enregistrer le master token
+    // Ce script est la seule source de vérité pour le token.
+    // Il écrase le token précédent à chaque envoi d'email.
     $masterToken = bin2hex(random_bytes(32));
     $tokenPayload = [
         'token'  => $masterToken,
-        'expiry' => time() + (14 * 24 * 60 * 60), // 14 jours
+        'expiry' => time() + (14 * 24 * 60 * 60), // Le lien reste valide 14 jours
     ];
-    // Où écrire ce token ? Définis un fichier dédié en storage si ce n'est pas déjà fait
-    $tokenFile = ($config['token_file'] ?? (rtrim($config['storage_dir'], '/').'/report_token.json'));
-    @file_put_contents($tokenFile, json_encode($tokenPayload, JSON_UNESCAPED_SLASHES), FILE_APPEND | LOCK_EX);
-    // Remarque: si tu veux un seul token actif, enlève FILE_APPEND pour écraser le précédent.
+
+    // Le chemin vers le fichier du token maître
+    $masterTokenFile = __DIR__ . '/../storage/master_token.txt';
+
+    // Écraser l'ancien token avec le nouveau (pas de FILE_APPEND)
+    if (@file_put_contents($masterTokenFile, json_encode($tokenPayload, JSON_UNESCAPED_SLASHES), LOCK_EX) === false) {
+        throw new Exception("Impossible d'écrire dans le fichier master_token.txt.");
+    }
 
     // 6) Email
     $subject = "[APEL St Jo] Attestation honorabilité - " . date('Y-m-d');
