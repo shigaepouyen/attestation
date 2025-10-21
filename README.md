@@ -1,3 +1,5 @@
+![Status: Stable](https://img.shields.io/badge/status-Stable-brightgreen)
+
 # 🧾 Système de gestion des attestations d'honorabilité
 
 Une application PHP simple et robuste pour collecter, suivre et gérer les attestations d’honorabilité des intervenants. Elle inclut des rappels automatiques, un portail de gestion pour les administrateurs et un accès sécurisé pour la direction.
