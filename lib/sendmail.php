@@ -20,12 +20,15 @@ function _write_mail_log($logDir, $line) {
     }
 }
 
-function sendMail($to, $subject, $body, $cfg) {
+function sendMail($to, $subject, $body, $cfg, $cc = []) {
   $logDir = $cfg['log_dir'] ?? __DIR__ . '/../storage/logs';
 
   // Si SMTP désactivé, fallback vers mail()
   if (empty($cfg['smtp']['enabled'])) {
     $headers = "From: {$cfg['smtp']['from_name']} <{$cfg['smtp']['from_email']}>\r\n";
+    if (!empty($cc)) {
+      $headers .= "Cc: " . implode(',', $cc) . "\r\n";
+    }
     $sent = @mail($to, $subject, $body, $headers);
     if (!$sent) {
         _write_mail_log($logDir, "mail() failed for recipient {$to}. Error: " . error_get_last()['message']);
@@ -45,6 +48,13 @@ function sendMail($to, $subject, $body, $cfg) {
     $m->Port = (int)$cfg['smtp']['port'];
     $m->setFrom($cfg['smtp']['from_email'], $cfg['smtp']['from_name']);
     $m->addAddress($to);
+
+    if (!empty($cc)) {
+      foreach ($cc as $cc_email) {
+        $m->addCC($cc_email);
+      }
+    }
+
     $m->Subject = $subject;
     $m->Body    = $body;
     $m->CharSet = 'UTF-8';
