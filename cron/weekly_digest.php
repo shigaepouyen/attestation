@@ -33,7 +33,8 @@ try {
     require_once __DIR__ . '/../lib/sendmail.php';
 
     // 4) Check nouveaux dépôts
-    $since = strtotime('-7 days');
+    $days = (int)($config['digest_period_days'] ?? 7);
+    $since = strtotime("-$days days");
     $checkNewStmt = $db->prepare('SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ? AND deleted_at IS NULL');
     $checkNewStmt->execute([$since]);
     $newSubmissionsCount = (int)$checkNewStmt->fetchColumn();
@@ -67,6 +68,7 @@ try {
     $reportLink = rtrim($config['site_base_url'], '/') . '/rapport.php?token=' . $masterToken;
     $directorTitle = $config['director_title'] ?? '';
     $to = $config['director_email'];
+    $cc = $config['director_email_cc'] ?? [];
 
     $body = "Bonjour " . $directorTitle . ",\n\n";
     $body .= "Il y a eu " . $newSubmissionsCount . " nouveau(x) dépôt(s) d'attestation cette semaine.\n\n";
@@ -75,7 +77,7 @@ try {
     $body .= "Ce lien est valable 14 jours.\n\n";
     $body .= "Cordialement,\nAPEL Saint-Joseph\n";
 
-    $sent = sendMail($to, $subject, $body, $config);
+    $sent = sendMail($to, $subject, $body, $config, $cc);
 
     if (!$sent) {
         // échec d’envoi: on logue sévèrement et on remonte un code d’erreur
