@@ -66,7 +66,12 @@ Une application PHP simple et robuste pour collecter, suivre et gérer les attes
 
 2.  **Configurer le projet** :
     *   Copiez `config_exemple.php` vers `config.php`.
-    *   Modifiez `config.php` pour définir les chemins (`storage_dir`, `db_file`, etc.), l'URL de base (`site_base_url`), et les paramètres SMTP pour l'envoi d'e-mails.
+    *   Modifiez `config.php`. Les paramètres principaux incluent :
+        *   `site_base_url`: L'URL publique de base de votre application.
+        *   `smtp`: Les détails de votre serveur SMTP pour l'envoi des e-mails.
+        *   `director_email`: L'adresse e-mail principale du destinataire du rapport.
+        *   `director_email_cc`: Un tableau d'adresses e-mail à mettre en copie du rapport (ex: `['email1@exemple.com', 'email2@exemple.com']`).
+        *   `digest_period_days`: Le nombre de jours à prendre en compte pour le rapport (ex: `7` pour un rapport hebdomadaire, `30` pour un mensuel).
 
 3.  **Créer la base de données** :
     *   Assurez-vous que le répertoire `db/` est inscriptible par le serveur web.

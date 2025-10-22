@@ -23,6 +23,7 @@ return [
     // 'copie1@exemple.fr',
     // 'copie2@exemple.fr',
   ],
+  'digest_period_days' => 7, // Période pour le digest (e.g., 7 pour un rapport hebdo)
 
   // SMTP via Google Workspace (expéditeur)
   'smtp' => [

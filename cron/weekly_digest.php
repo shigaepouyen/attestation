@@ -33,7 +33,8 @@ try {
     require_once __DIR__ . '/../lib/sendmail.php';
 
     // 4) Check nouveaux dépôts
-    $since = strtotime('-7 days');
+    $days = (int)($config['digest_period_days'] ?? 7);
+    $since = strtotime("-$days days");
     $checkNewStmt = $db->prepare('SELECT COUNT(*) FROM attestations WHERE uploaded_at >= ? AND deleted_at IS NULL');
     $checkNewStmt->execute([$since]);
     $newSubmissionsCount = (int)$checkNewStmt->fetchColumn();
