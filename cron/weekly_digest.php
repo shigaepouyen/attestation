@@ -71,10 +71,10 @@ try {
     $cc = $config['director_email_cc'] ?? [];
 
     $body = "Bonjour " . $directorTitle . ",\n\n";
-    $body .= "Il y a eu " . $newSubmissionsCount . " nouveau(x) dépôt(s) d'attestation cette semaine.\n\n";
+    $body .= "Il y a eu " . $newSubmissionsCount . " nouveau(x) dépôt(s) d'attestation depuis le dernier mail.\n\n";
     $body .= "Consultez la liste complète et à jour des attestations valides via le lien sécurisé :\n\n";
     $body .= "$reportLink\n\n";
-    $body .= "Ce lien est valable 14 jours.\n\n";
+    $body .= "Ce lien est valable jusqu'au prochain mail.\n\n";
     $body .= "Cordialement,\nAPEL Saint-Joseph\n";
 
     $sent = sendMail($to, $subject, $body, $config, $cc);
